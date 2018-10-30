@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>v3</title>
+  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+  <link rel="stylesheet" href="./assets/css/duole.css">
+  <style type="text/css">
+  </style>
+</head>
+<body>
+<script type="text/javascript">
+
+  var imgServer = 'http://192.168.1.121:3000'
+  if (window.location.hostname !== '192.168.1.121' && window.location.hostname !== '192.168.1.65' && window.location.hostname !== 'localhost') {
+    imgServer = 'http://'+window.location.hostname+':3000'
+  }
+  // console.log(window.location)
+
+  var tool = {
+    copy: () => {
+      return JSON.parse(JSON.stringify(o))
+    },
+    uniqList: function() {
+      const ls = []
+      var addToLs = (ls, it) => {
+        if (ls.indexOf(it) === -1) {
+          ls.push(it)
+        }
+      }
+      console.log(typeof arguments);
+      var sum =0, len = arguments.length;
+      for(var i=0; i<len; i++){
+        var obj = arguments[i]
+        if (obj instanceof Array) {
+          obj.forEach((it) => {addToLs(ls, it)})
+        } else if (obj instanceof Object) {
+          Object.keys(obj).forEach((it) => {addToLs(ls, it)})
+        }
+        // console.log(arguments[i])
+      }
+      return ls
+    },
+    resortList: (src, orderList) => {
+      const res = {
+        exist: [],
+        notExist: [],
+      }
+      orderList.forEach((it) => {
+        if (src.indexOf(it) > -1) {
+          if (res.exist.indexOf(it) === -1) {
+            res.exist.push(it)
+          }
+        } else {
+          res.notExist.push(it)
+        }
+      })
+      return res
+    },
+    _timer: 0,
+    timer: (key) => {
+      const curTime = (+ new Date())
+      tool._timer = tool._timer || curTime
+      let diff = curTime - tool._timer
+      tool._timer = curTime
+      // console.warn('[['+key+']]耗时：' +  diff)
+    },
+  }
+
+  var config = {
+    cellHeight: {
+      'true': 130,
+      'false': 30, 
+    },
+  }
+
+  var util = {
+    syncSkuInfoPanel: () => {
+      var pos = $('#dataContainer_size_content').position()
+      // console.log('curpos:' + JSON.stringify(pos))
+      requestAnimationFrame(() => {
+        $('#skus_content').css('left', -pos.left + app.skuInfoWidth)
+      });
+    },
+    getAllContentHeight: (length, cellHeight=130) => {
+      
+    },
+    getCurrentPageIdx: (scrollTop = 0, cellHeight=130) => {
+      scrollTop = Math.abs(scrollTop) + 1
+      var onepageHeight = $('#dataContainer_size_parent').height()
+      var onepageCellCount = Math.floor(onepageHeight / cellHeight)
+
+      var pageIdx = Math.ceil(scrollTop / (onepageCellCount*cellHeight))
+      // console.log('pageIdx:' + pageIdx)
+      return pageIdx
+    },
+    getPagePartsInfo: (pageIdx = 1, cells=[], cellHeight=130) => {
+      console.log('getPagePartsInfo:' + pageIdx)
+      cells = $$dataSkuList
+
+      // console.log('cells:')
+      // console.log(cells)
+
+      var cellCount = cells.length
+      var onepageHeight = $('#dataContainer_size_parent').height()
+      var onepageCellCount = Math.floor(onepageHeight / cellHeight)
+      var onepageValidHeight = onepageCellCount * cellHeight;
+
+      const allCellHeight = cellHeight * cellCount
+
+      var validStart = pageIdx - 2
+      if (validStart < 0) validStart = 0
+      let headHeight = validStart * onepageValidHeight
+
+      let startSkuIdx = 0
+      startSkuIdx = validStart * onepageCellCount
+      console.log('startSkuIdx '+ startSkuIdx)
+
+
+      // var showPages = 1
+      var showPages = 4
+      // console.log('start:' +  (validStart * onepageCellCount) )
+      // console.log('end:' +  ((validStart+showPages)*onepageCellCount) )
+
+      let visibleCells = (cells.slice(validStart * onepageCellCount, (validStart+showPages)*onepageCellCount))
+      let bodyHeight = visibleCells.length * cellHeight
+      let tailHeight = allCellHeight - bodyHeight - headHeight
+
+      return {
+        headHeight,
+        bodyHeight,
+        tailHeight,
+        allCellHeight,
+        visibleCells,
+        startSkuIdx,
+        pageIdx,
+      }
+    },
+  }
+
+  // // 测试
+  // var ls = tool.uniqList(['1','3'], ['1', '2', '4', '6'], {'5': 1, '7': 1})
+  // console.log(ls)
+  // // 测试
+  // var ls = tool.resortList(ls, ['3', '2', '1' ,'9', '7'])
+  // console.log(ls)
+</script>
+<div id="app" class="scrollableContainer" @mousedown="mouseDown" @mouseup="mouseUp">
+  <header style="position: fixed; z-index: -1;top:0; left: 0; opacity: 0.04;">
+  </header>
+
+  <div id="scroll_info" style="position:fixed; background: #f00;min-width: 50px; height: 0px;position: absolute;top: 0px;right: 0px; opacity:0;">
+  </div>
+
+  <style type="text/css">
+    .info {
+      padding: 10px 10px 0 0px;
+    }
+  </style>
+
+  <!-- table body S -->
+  <div style="margin-top: 0px;position: fixed; top: 0px; bottom: 20px; background: #f1f1f1;width: 100%;display: flex;flex-direction: row;">
+
+
+    <div id="dataContainer_size_parent" :style="'display:flex;flex:1;margin-top: 0px;top: 0px; bottom: 20px; background: #fff;overflow: scroll;position: relative; padding-left:'+ (skuInfoWidth + 1) +'px;padding-top:25px;'">
+
+
+      <div id="skus_content" :style="'background: #fff; height:' + (headHeight+bodyHeight+tailHeight) + 'px; position:absolute; z-index:9999;top:0; left: '+ 0 +'px; opacity: 0.9; padding-top:25px; ' ">
+
+        <div :style="'height:'+headHeight+'px'"></div>
+
+        <div class="scroller" :style="'width: '+(skuInfoWidth + 0)+'px;'">
+          <div v-for="(rowidx, sku) in dataIdsVisible" :id="'row_'+sku" :key="sku" style="position:relative; ">
+            <div
+              :style="'height:'+cellHeight+'px; display:flex; flex-direction:row; overflow:hidden;border-bottom: 1px solid #DDD;'"
+            >
+              <div :style="'position:relative;' + (addEpr[sku]?'border-bottom:3px solid red;':'')">
+                <nobr>
+                  <a :href="'https://s.taobao.com/search?q='+sku+'&imgfile=&js=1&stats_click=search_radio_all%3A1&ie=utf8'" target="_blank" style="user-select:text;"><font style="user-select:text;">{{sku}}</font></a><button class="btn" style="cursor:hand;" :data-clipboard-text="sku">C</button>
+                  <!--  {{(markSkus[sku]? '*' : '')}} -->
+                </nobr> <br />
+                <div style="position:absolute;top:10;left:0;z-index: 9999;">
+                  {{startSkuIdx + rowidx + 1}}
+                </div>
+                <img :id="'imgWithRetry_'+sku" @click="reloadImg('imgWithRetry_'+sku, imgServer+'/?sku='+sku+'&'+(+ new Date()))" :src="imgServer+'/?sku='+sku" width="100" height="100" />
+              </div>
+              
+              <div style="display:flex; flex-direction:column; padding-left: 8px;">
+                <div>{{xSkusInfo[sku].skuName}}</div>
+              
+                <div style="display:flex; flex-direction:row;">
+                  <div class="info"><font style="color:red;"> {{(priceRate * parseFloat(xSkusInfo[sku].RETAILPRICE)).toFixed(1)}}</font>/{{xSkusInfo[sku].RETAILPRICE}}</div>
+                  <div class="info" style="color:blue;">{{xSkusInfo[sku].SEASON}}</div>
+                  <div class="info" style="color:green;">{{xSkusInfo[sku].gender}}</div>
+                </div>
+
+                <div class="info" style="color:orange;">{{xSkusInfo[sku].cate}}</div>
+
+              </div>
+
+
+            </div>
+          </div>
+        </div>
+
+        <div :style="'height:'+tailHeight+'px'"></div>
+
+      </div>
+
+
+      <!-- table size 第一行 S -->
+      <div :style="'margin-top: 0px;position: absolute; top: 0px; height: 25px;display: flex;flex-direction: row; z-index:9998;'">
+
+        <div :style="'display:flex;flex:1;margin-top: 0px;top: 0px; background: #F9F9F9; padding-left:0px ;overflow: hidden;position: relative;'">
+          <div id="headerContainer" :style="'' ">
+            <div style="">
+              <div :key="id" class="sku" :style="'background: #DDD;height:25px;'">
+                <div class="sku-row-scrollable">
+                  <div style="width: 40px;border-right:1px solid #aaa;"></div>
+                  <div v-for="(idx, size) in sizes" :key="idx+'_'+size"
+                    :class="{
+                      'size': true,
+                      'col-selected': (overSkuSizeInfo.size === size),
+                      'size-S': (size.length > 4),
+                    }"
+                    :style="'width:'+sizeWidth+'px'">
+                    {{size}}
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <!-- table size 第一行 E -->
+
+
+      <div id="dataContainer_size_content" :style="'background: #fff;min-height: 2000px; height:' + (headHeight+bodyHeight+tailHeight) + 'px; margin-top:0px; ' ">
+
+        <div :style="'height:'+headHeight+'px'"></div>
+
+        <div class="scroller" style=";overflow-y:scroll;">
+          <div v-for="sku in dataIdsVisible" :id="'row_'+sku" :key="sku" style="position:relative;">
+            <!-- <div class="sku-column-fixed">{{id}}</div> -->
+            <div class="sku-row-scrollable" style="border-left:3px solid #DEDEDE;">
+              <div style="width: 37px;border-right:1px solid #aaa; color:red; font-size:14px;">
+                <sku-sumed :sku_="sku" :init_="xSkusInfo[sku].sum"></sku-sumed>
+              </div>
+              <div
+                v-for="(idx, size) in sizes"
+                :class="{
+                  'selectNone':true,
+                  'size':true,
+                  'sku-row-scrollable-item': true,
+                  'row-selected': (overSkuSizeInfo.sku === sku),
+                }"
+                @mouseenter="overSkuSize(sku, size)"
+                :style="'width:'+sizeWidth+'px;height:'+cellHeight+'px'"
+              >
+                <div v-if="xSkusInfo[sku] && xSkusInfo[sku].sizes && (xSkusInfo[sku].sizes[size] || stockCount(sku, size) > 0)" class="selectNone">
+                  <sku-size-cell :sku_="sku" :size_="size" :cellHeight_="cellHeight"></sku-size-cell>
+                </div>
+              </div>
+            </div>
+
+            <!-- 蒙板 -->
+            <div v-if="dataIdsHide[sku] === 1" style="position:absolute;background:#000;left:0;top:0;width:100%;height:100%;opacity: 0.6;"
+            @mouseover="overSkuSize(sku)"
+            >
+            </div>
+
+          </div>
+        </div>
+
+        <div :style="'height:'+tailHeight+'px'"></div>
+
+      </div>
+      
+      <!-- table size header-float S -->
+      <div id="header_float" :style="'margin-top: 0px;position: absolute; top: -40px; height: 25px;display: flex;flex-direction: row; z-index:9998;'">
+
+        <div :style="'display:flex;flex:1;margin-top: 0px;top: 0px; background: #F9F9F9; padding-left:0px ;overflow: hidden;position: relative;'">
+          <div id="headerContainer" :style="'' ">
+            <div style="">
+              <div :key="id" class="sku" :style="'background: #DDD;height:25px;'">
+                <div class="sku-row-scrollable">
+                  <div style="width: 40px;"></div>
+                  <div v-for="(idx, size) in sizes" :key="idx+'_'+size" :class="{'size': true, 'col-selected': (overSkuSizeInfo.size === size), 'size-S': (size.length > 4)}" :style="'width:'+sizeWidth+'px'">
+                    {{size}}
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <!-- table size header-float E -->
+
+    </div>    
+  </div>
+
+  <div id="footer_float" :style="'margin-top: 0px;position: absolute; bottom: 0px; height: 25px; display: flex;flex-direction: row; z-index:9998;'">
+    
+    <div>设置(P)</div>
+
+    <div style="margin-left: 5px;margin-right: 5px;color:#ccc;">|</div>
+
+    <div style="">详情(S)</div>
+
+    <div style="margin-left: 5px;margin-right: 5px;color:#ccc;">|</div>
+
+<!-- 
+    <div style="margin-left: 15px;">上页(D)</div>
+    <div>下页(F)</div>
+ -->
+    <div style="margin-left: 0px;">取消(X)</div>
+    <div>暂存(A)</div>
+
+    <div style="margin-left: 5px;margin-right: 5px;color:#ccc;">|</div>
+
+
+    <div style="margin-left: 0px;">衣服(Q)</div>
+    <div>鞋(W)</div>
+    <div>装备(E)</div>
+    <div>全部(R)</div>
+    <div>童鞋(T)</div>
+
+    <div style="margin-left: 5px;margin-right: 5px;color:#ccc;">|</div>
+
+
+    <div style="margin-left: 0px;">价格比例 <input type="text" style="width: 35px;" v-model="priceRate" /></div>
+    
+
+    <div style="margin-left: 15px;">搜索 <input type="text" style="width: 75px;" v-model="searchKey" @keyup.enter="search" @blur="search" /></div>
+
+    <div style="margin-left: 15px;">行号 <input type="text" style="width: 40px;" v-model="lineNo" @keyup.enter="goToLine()" /></div>
+
+  </div>
+
+
+  <!-- table body E -->
+  <div v-if="showController || skus.length === 0" style="position: fixed;opacity: 0.5; z-index: 9999998;top:0; bottom:0; left: 0; width: 100%; background:#000 ;">
+  </div>
+
+  <footer v-if="showController || skus.length === 0" style="position: fixed;opacity: 1; z-index: 9999999;bottom:0; left: 0; width: 100%; padding: 40px 100px 0 100px;background:#FFF;">
+    <a v-on:click="clearCache">清空数据</a>
+    <a v-on:click="exportxlsx" style="margin-left: 20px;">导出需求</a>
+    <h5>货号列表</h5>
+    <textarea id="iptSkus" v-model="skusStr" style="width: 100%;height:300px;user-select:text;"></textarea>
+  </footer>
+</div>
+<script type="text/javascript" src="./assets/js/es6_promise.js"></script>
+<script type="text/javascript" src="./assets/js/moment.js"></script>
+<script type="text/javascript" src="./assets/js/vue_v1.min.js"></script>
+<script type="text/javascript" src="./assets/js/vuex.js"></script>
+<script type="text/javascript" src="./assets/js/jwerty.js"></script>
+<script type="text/javascript" src="./assets/js/clipboard.js"></script>
+
+<script type="text/javascript">
+  Vue.use(Vuex)
+
+  const store = new Vuex.Store({
+    state: {
+      skus: [],
+      overSkuSizeInfo: {},
+      rowsRange: {
+        min: 0,
+        max: 1,
+      },
+      showPic: true,
+      currentScroller: 'dataContainer_sku_content',
+      needAmount: {},
+      skuInfoMap: {},
+      priceRate: 1,
+      needAmountChanged: 0,
+    },
+    mutations: {
+      overSkuSize (state, payload) {
+        state.overSkuSizeInfo = {
+          sku: payload.sku,
+          size: payload.size,
+        }
+      },
+      setNeedAmount (state, payload) {
+        const needAmount = JSON.parse(JSON.stringify(state.needAmount))
+        if (typeof(app.skuInfoMap[payload.sku].sizes[payload.size]) !== 'undefined') {
+
+          console.log('!!!!!!!needAmount:'); console.log(needAmount);
+
+          needAmount[payload.sku + '_' + payload.size] = payload.needamount
+          state.needAmount = needAmount 
+        }
+
+        // state.needAmount[payload.sku + '_' + payload.size] = payload.needamount
+      },
+
+    }
+  });
+
+
+  // store.commit('overSkuSize', {sku: 'skuaaa', size: 'sizebbb'})
+  // console.log(store.state.overSkuSizeInfo)
+
+</script>
+<script type="text/javascript" src="./assets/js/zepto.js"></script>
+<script type="text/javascript">
+  var localstorage_sku_pre_check = {}
+  var localstorage_add_epr = {}
+
+  var localstorage_stock_self = localStorage.getItem('stock_self')
+  if (localstorage_stock_self) localstorage_stock_self = JSON.parse(localstorage_stock_self)
+
+  const initFromLocalStorage = (key, type = 'json', dft = {}) => {
+    var res = localStorage.getItem(key)
+    if (res) {
+      if (type === 'json') {
+        try {
+          res = JSON.parse(res)
+        } catch (e) {
+          res = dft
+        }
+      }
+    } else {
+      res = dft
+    }
+    return res
+  }
+
+  var localstorage_hide_skus = initFromLocalStorage('hide_skus', 'json', {})
+  // console.log('localstorage_hide_skus')
+  // console.log(localstorage_hide_skus)
+
+  var localstorage_skus_str = initFromLocalStorage('skus_str', 'text', '')
+
+  // console.log('localstorage_skus_str')
+  // console.log(localstorage_skus_str)
+  
+  var localstorage_mark_skus = localStorage.getItem('mark_skus')
+  if (localstorage_mark_skus) {
+    try {
+      localstorage_mark_skus = JSON.parse(localstorage_mark_skus)
+
+    } catch (e) {
+      localstorage_mark_skus = {}
+    }
+  } else {
+    localstorage_mark_skus = {}
+  }
+
+    
+  // console.log(localstorage_sku_pre_check)
+  // console.log(localstorage_stock_self)
+
+  var localstorage_need_amount = localStorage.getItem('need_amount')
+  if (localstorage_need_amount) {
+    localstorage_need_amount = JSON.parse(localstorage_need_amount)
+  } else {
+    localstorage_need_amount = {}
+  }
+  // alert(JSON.stringify(localstorage_need_amount))
+
+
+  const $$saveNeedAmountToLocalStorage = (sku, size, value) => { 
+    console.log('$$saveNeedAmountToLocalStorage')
+
+    console.log('sku:'+ sku)
+    console.log('size_:'+ size)
+    console.log('needAmount:'+ value)
+
+
+    localstorage_need_amount = localstorage_need_amount || {}
+    localstorage_need_amount[sku] = localstorage_need_amount[sku] || {}
+    localstorage_need_amount[sku][size] = value
+    localStorage.setItem('need_amount', JSON.stringify(localstorage_need_amount))
+
+    store.state.needAmountChanged = (+ new Date())
+  }
+
+  // 初始化加载数据
+  $$reloadSkus = (skuMap) => {
+    $$dataMap = skuMap || {}
+    $$dataSkuList = Object.keys($$dataMap);
+    $$searchResult = $$dataSkuList;
+    $$allLength = $$dataSkuList.length;
+  }
+  
+  $$reloadSkus({})
+
+  // const getCheckedAmount = () => {
+  //   const res = JSON.parse(JSON.stringify($$StockInfoMap))
+  //   for (var sku in localstorage_need_amount) {
+  //     var sizes = localstorage_need_amount[sku]
+  //     for(var size in sizes) {
+  //       res[sku].sizes[size] = sizes[size]
+  //     }
+  //   }
+  //   // console.log(res)
+  // }
+
+
+
+
+
+  // console.log($$dataSkuList)
+  console.log(typeof $$scrolledDistance)
+  if (typeof $$scrolledDistance == 'undefined') {
+    // alert('reset ')
+
+    $$scrolledDistance = {
+      top: 0,
+      left: 0,
+    } 
+  }
+  $$nextUpdateTick = 0;
+
+
+  var lastPageIdx = 1
+  var scrollTimer = null
+  var lastPos = null
+
+
+  var winScroll = function(fromDom) {
+
+    var _from = 'dataContainer_sku_content'
+    var _to = 'dataContainer_size_parent'
+    if (fromDom == 'dataContainer_size_content') {
+      _to = 'dataContainer_sku_parent'
+      _from = fromDom
+    }
+    return function() {
+      tool.timer('winScroll')
+      if(scrollTimer !== null) {
+          clearTimeout(scrollTimer);        
+      }
+
+      scrollTimer = setTimeout(function() {
+        var pos = $('#'+_from).position()
+        console.log('curpos:' + JSON.stringify(pos))
+        var pageIdx = util.getCurrentPageIdx(pos.top)
+        // console.error('pageIdx:' + pageIdx)
+        if (pageIdx !== lastPageIdx) {
+          lastPageIdx = pageIdx
+
+          tool.timer('page loadPage start')
+          app.loadPage(pageIdx)
+          tool.timer('page loadPage end')
+        }
+
+        // console.log('lastPos:' + JSON.stringify(lastPos))
+        $('#scroll_info').text(JSON.stringify(pos))
+
+        if (pos.left === 0) {
+          setTimeout(function() {
+            pos.left = $('#'+_from).parent()[0].scrollLeft = 1
+          }, 500)
+        }
+
+        $$scrolledDistance.top = -pos.top
+        $$scrolledDistance.left = -pos.left
+
+
+        if (app) {
+          // if (_from === 'dataContainer_size_content') {
+            app.sizeScrollLeft = $$scrolledDistance.left
+          // }
+        }
+
+        if (lastPos) {
+          // console.log(Math.abs($$scrolledDistance.top - lastPos.top))
+          if ((Math.abs($$scrolledDistance.top - lastPos.top) < 2)) {
+            return
+          }
+        }
+        // console.log('lastPos set11111:' + JSON.stringify(lastPos))
+
+        lastPos = {top: $$scrolledDistance.top}
+        // console.log('lastPos set:' + JSON.stringify(lastPos))
+
+        $$renderDatas();
+
+        $('#'+_to).scrollTop(
+          $('#'+_from).parent()[0].scrollTop
+        )
+      }, 100);
+    }
+  }
+
+  var scrollFromSizeToSku = winScroll('dataContainer_size_content')
+
+
+
+  $$datas = [];
+  for(var i = 0; i<=$$allLength; i++) {
+    $$datas.push({id:i, sku:'sku:'+i})
+  }
+  // console.dir($$datas)
+
+
+  $$StockInfoMap = {}
+  $$fetchStockData = function(ids) {
+    const noIds = []
+    for(var i in ids){
+      const sku = ids[i]
+      if (!$$StockInfoMap[sku]) {
+        noIds.push(sku)
+      }
+    }
+    // console.log('noIds:' + JSON.stringify(noIds))
+
+    if (noIds.length > 0) {
+      tool.timer('page fetch start')
+      ;(async () => {
+        const keyQueryStr = noIds.join('&key=')
+        let res = await fetchResouce({
+            type: 'GET',
+            url: '/mems?&type=json&key=' + keyQueryStr,
+            dataType: 'json',
+            timeout: 300,
+        })
+        res = res.data
+        tool.timer('res returned')
+        console.log(res)
+
+        const rmSizes = (info, size) => {
+          if (info.sizes && info.sizes[size]) {
+            delete info.sizes[size]
+          }
+        }
+
+        for(var sku in res) {
+          // 过滤 14 -- 18，直接删除 // tudo
+          
+          rmSizes(res[sku], '13.5')
+          rmSizes(res[sku], '14')
+          rmSizes(res[sku], '14.5')
+          rmSizes(res[sku], '15')
+          rmSizes(res[sku], '15.5')
+          rmSizes(res[sku], '16')
+          rmSizes(res[sku], '16.5')
+          rmSizes(res[sku], '17')
+          rmSizes(res[sku], '17.5')
+          rmSizes(res[sku], '18')
+
+
+          $$StockInfoMap[sku] = res[sku]
+          app.skuInfoMap[sku] = res[sku]
+
+          Vue.set(store.state.skuInfoMap, sku, res[sku])
+
+          // console.log('$$StockInfoMap')
+          // console.log($$StockInfoMap)
+
+          // Vue.set(app.skuInfoMap, sku, res[sku])
+          // app.$set('skuInfoMap', app.skuInfoMap)
+
+          // app.skuInfoMap = JSON.parse(JSON.stringify(app.skuInfoMap))
+
+          // store.state.skuInfoMap = app.skuInfoMap
+
+          // console.dir('app.skuInfoMap')
+          // console.dir(app.skuInfoMap)
+        }
+        tool.timer('page loaded')
+
+        // bus.$emit('sku_info_loaded', res)
+      })()
+    }
+
+    return noIds
+  }
+
+
+
+  // 重新计算可视区域内的id
+  $$renderDatas = function() {
+    var res = '';
+    var resArr = [];
+
+    // if (!app || !app.dataIdsVisible) return;
+
+    // // 计算出应该显示的i范围
+    // var lineHeight = app.cellHeight;
+
+    // var rowsMin = Math.ceil($$scrolledDistance.top / lineHeight)
+    // if (rowsMin < 0) rowsMin = 0
+
+    // var rowsMax = Math.ceil(iMin + $('#dataContainer_sku_content').parent().offset().height / lineHeight)
+    // if (rowsMin < 0) rowsMin = 0
+
+    // var iMin = $$scrolledDistance.top / lineHeight - 1 - 20 + 10
+    // iMin = Math.ceil(iMin)
+    // if (iMin < 0) iMin = 0
+
+    // var iMax = iMin + $('#dataContainer_sku_content').parent().offset().height / lineHeight + 40 - 20
+    // iMax = Math.ceil(iMax)
+    // if (iMax > $$allLength) iMax = $$allLength
+    
+    // var dataIdsVisible = []
+    // // 从筛选范围内搜索
+
+    // store.state.rowsRange = {
+    //   min: iMin,
+    //   max: iMax,
+    // }
+
+    // for(var i = iMin; i<iMax; i++) {
+    //   if (i >= $$searchResult.length) {
+    //     break;
+    //   }
+    //   dataIdsVisible.push($$searchResult[i])
+    // }
+
+    // // console.log('dataIdsVisible' + JSON.stringify(dataIdsVisible) )
+    // // 获得没有获得过的信息
+    // $$fetchStockData(dataIdsVisible)
+
+    // app.dataIdsVisible = dataIdsVisible
+
+    // $$nextUpdateTick = (new Date()).getTime()
+
+    // app.headHeight = Math.ceil((lineHeight*iMin))
+    // app.bodyHeight = Math.ceil(lineHeight * (iMax - iMin + 1))
+    // app.tailHeight = Math.ceil(($$allLength - iMax)*lineHeight)
+
+  }
+
+  /*
+$('#dataContainer_size_parent')[0].scrollTop
+$('#dataContainer_sku_content').parent()[0].scrollTop
+
+$('#dataContainer_sku_content').on('scroll', winSc)
+$('#dataContainer_sku_content').parent().scroll(winScroll);
+  */
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="sku-sumed" style="display: none;user-select:none;" class="selectNone">
+  <font style="color:red;">{{needAmount}}</font>
+  <div style="color:gray;">{{init_}}</div>
+  <div style="color:green;margin-top:3px;">{{stockAmount}}</div>
+  <div style="color:black;margin-top:3px;">{{stockAmount + needAmount}}</div>
+</div>
+
+<script type="text/javascript">
+
+Vue.component('sku-sumed', {
+  props: ['sku_', 'init_'],
+  data: () => {
+    return {
+      needAmount: 0,
+      stockAmount: 0,
+    }
+  },
+  created: function () {
+    setTimeout(() => {
+      this.reload()
+    }, 10)
+  },
+  watch: {
+    needAmountChanged: function() {
+      this.reload()
+    }
+  },
+  destroyed: function() {
+  },
+  methods: {
+    reload() {
+      this.reloadStockAmount()
+      this.reloadNeedAmount()
+    },
+    reloadStockAmount() {
+      let ret = ''
+      let onroad = 0
+      let instock = 0
+      // console.log('localstorage_stock_self')
+      // console.log(localstorage_stock_self)
+      if (
+        localstorage_stock_self.onroad
+        && localstorage_stock_self.onroad[this.sku_]
+        && localstorage_stock_self.onroad[this.sku_].sizes
+      ) {
+        onroad = Object.values(localstorage_stock_self.onroad[this.sku_].sizes).reduce((pre, cur) => {
+          cur = parseInt(cur)
+          if (cur > 0) pre += cur
+          return pre
+        }, 0)
+      }
+      if (
+        localstorage_stock_self.instock
+        && localstorage_stock_self.instock[this.sku_]
+        && localstorage_stock_self.instock[this.sku_].sizes
+      ) {
+        instock = Object.values(localstorage_stock_self.instock[this.sku_].sizes).reduce((pre, cur) => {
+          cur = parseInt(cur)
+          if (cur > 0) pre += cur
+          return pre
+        }, 0)
+      }
+
+      if (instock >0 || onroad >0) {
+        ret = (instock + onroad)
+      } else {
+        ret = ''
+      }
+      this.stockAmount = ret
+    },
+    reloadNeedAmount() {
+      // if (!localstorage_need_amount[this.sku_]) return '-'
+      // const sum = Object.values(localstorage_need_amount[this.sku_]).reduce((pre, cur) => {
+      //     cur = parseInt(cur)
+      //     if (cur > 0) pre += cur
+      //     return pre
+      //   }, 0)
+      // store.state.needAmount[this.sku_+'_'+this.size_]
+      // this.needAmount = sum || 0
+
+      const sku = this.sku_
+      if (!app.skuInfoMap[sku]) return '-'
+      let sum = 0
+
+      Object.keys(app.skuInfoMap[sku].sizes).forEach((size) => {
+        if (localstorage_need_amount[sku] && typeof(localstorage_need_amount[sku][size]) !== 'undefined') {
+          sum += parseInt(localstorage_need_amount[sku][size])
+        } else {
+          sum += parseInt(app.skuInfoMap[sku].sizes[size])
+        }
+      })
+      this.needAmount = sum || 0
+    },
+  },
+  computed: {
+    needAmountChanged () {
+      return store.state.needAmountChanged
+    },
+    // needAmount () {
+    // },
+  },
+  template: document.getElementById('sku-sumed').innerHTML,
+})
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div id="sku-size-cell" style="display: none;user-select:none;" class="selectNone">
+  <div class="selectNone">
+    <div v-if="amount > 0 || (stockOnRoad + stockInStock) > 0">
+
+      <div style="height: 25px;">
+        <input :id="'cell_need_'+id" v-if="amount > 0" v-on:focus="focus('cell_need_')" type='text' v-on:blur="changeAmount" v-model="needAmount" style='width:100%;box-sizing:border-box;background:transparent;font-size:13px;color:red;text-align:center;border: 0px;' :title="maxNeedAmount" />
+      </div>
+
+      <div style="height: 20px;"><font v-if="stockOnRoad > 0 || stockInStock > 0" class="stock_amount" color="green">{{stockOnRoad + stockInStock}}</font></div>
+
+      <input :id="'cell_forecast_'+id" v-on:focus="focus('cell_forecast_')" v-on:blur="changeAmount" v-if="amount > 0" type='text' v-model="forecastAmount" style='width:100%;box-sizing:border-box;background:transparent;font-size:13px;color:#333;text-align:center;border: 0px;' />
+
+      <!-- :{{needAmountInStore}} -->
+      
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+
+Vue.component('sku-size-cell', {
+  props: ['sku_', 'size_', 'cellHeight_', 'sku_info_'],
+  data: () => {
+    return {
+      editingForecast: false,
+      time: 0,
+      firstload: true,
+      diff: 0,
+      needAmount: 0,
+      maxNeedAmount: 0,
+      amount: 0,
+      forecastAmount: 0,
+    }
+  },
+  created: function () {
+    this.refresh()
+  },
+  watch: {
+    'update_': function() {
+    },
+    'needAmountInStore': function(val) {
+      console.log('needAmountInStore:' + val)
+      this.needAmount = val
+    },
+    'needAmount': function(val, oldval) {
+      // if (val === this.needAmountInStore) {
+      //   console.log('already = needAmountInStore')
+      //   return
+      // }
+      if (val === oldval) {
+        console.log('already changed')
+        return
+      } else {
+        // console.log('change needamount')
+      }
+      if (!val || val < 0) val = 0
+
+      if (val > this.maxNeedAmount) {
+        val = this.maxNeedAmount
+      }
+      this.needAmount = val
+      this.forecastAmount = parseInt(this.stockOnRoad) + parseInt(this.stockInStock) + parseInt(this.needAmount)
+
+
+      if (!this.firstload) {
+        $$saveNeedAmountToLocalStorage(this.sku_, this.size_, val)
+      }
+
+      this.firstload = false
+
+      store.state.needAmount[this.sku_+'_'+this.size_] = val
+    },
+    'forecastAmount': function(val, oldval) {
+      if (val === oldval) return
+      
+      if (this.editingForecast) {
+        let needAmount = this.forecastAmount - parseInt(this.stockOnRoad) - parseInt(this.stockInStock)
+        // console.log('needAmount:' + needAmount)
+        if (needAmount > this.maxNeedAmount) needAmount = this.maxNeedAmount
+        this.needAmount = needAmount
+        this.forecastAmount = parseInt(this.stockOnRoad) + parseInt(this.stockInStock) + this.needAmount
+        this.changeAmount()
+      }
+    },
+    xSkuInfo: function() {
+      this.refresh()
+    },
+  },
+  destroyed: function() {
+  },
+  methods: {
+    del: function() {
+      console.log('-1-del:'+this.sku_ + '/'+this.size_)
+      this.editingForecast = true
+      this.needAmount = 0
+      console.log('-2-del:'+this.sku_ + '/'+this.size_)
+    },
+    focus: function(name) {
+      // console.log('#' + name + this.sku_ + '_' + this.size_)
+      const id = '' + name + this.id
+      document.getElementById(id).focus();
+      document.getElementById(id).select();
+      if (name === 'cell_forecast_') {
+        this.editingForecast = true
+      }
+    },
+    changeAmount: function() {
+      setTimeout(() => {
+        $$saveNeedAmountToLocalStorage(this.sku_, this.size_, this.needAmount)
+        // this.editingForecast = false
+      }, 10)
+    },
+    refresh: function() {
+        const sizes = this.xSkuInfo
+        // console.log('sizes:' + JSON.stringify(sizes))
+        if (sizes && sizes[this.size_]) {
+          this.amount = sizes[this.size_]
+        } else {
+          this.amount = 0
+        }
+        // this.skuName = this.skuInfo.skuName
+
+        // console.log('this.refreshTimes' + this.refreshTimes + ' / ' + JSON.stringify(localstorage_need_amount))
+
+        // if (localstorage_need_amount[this.sku_] && typeof(localstorage_need_amount[this.sku_][this.size_]) !== 'undefined') {
+        //   console.log( this.sku_ + '/' + this.size_ + ':'+ JSON.stringify(localstorage_need_amount[this.sku_][this.size_]) )
+        // }
+
+
+        if (localstorage_need_amount[this.sku_] && typeof(localstorage_need_amount[this.sku_][this.size_]) !== 'undefined') {
+          this.needAmount = localstorage_need_amount[this.sku_][this.size_]
+
+          // console.log('localstorage_need_amount[this.sku_][this.size_]:'+localstorage_need_amount[this.sku_][this.size_])
+        } else {
+          this.needAmount = this.amount
+          // console.log('default:'+this.amount)
+        }
+        this.maxNeedAmount = this.amount
+        // console.log( 'end:' + this.sku_ + '/' + this.size_ + ':'+ this.needAmount )
+      // }
+
+
+    },
+  },
+  computed: {
+    xSkuInfo () {
+      // console.error('store.state.skuInfoMap[this.sku_]')
+      // console.log(store.state.skuInfoMap[this.sku_].sizes)
+      // return {}
+      return store.state.skuInfoMap[this.sku_].sizes || {}
+    },
+    id() {
+      return this.sku_ + '_' + this.size_.replace(/\-/ig, '').replace(/\./ig, '')
+    },
+    stockOnRoad () {
+      if (
+        localstorage_stock_self.onroad
+        && localstorage_stock_self.onroad[this.sku_]
+        && localstorage_stock_self.onroad[this.sku_].sizes
+        && localstorage_stock_self.onroad[this.sku_].sizes[this.size_]
+      ) {
+        return parseInt(localstorage_stock_self.onroad[this.sku_].sizes[this.size_])
+      }
+      return 0
+    },
+    stockInStock () {
+      if (
+        localstorage_stock_self.instock
+        && localstorage_stock_self.instock[this.sku_]
+        && localstorage_stock_self.instock[this.sku_].sizes
+        && localstorage_stock_self.instock[this.sku_].sizes[this.size_]
+      ) {
+        return parseInt(localstorage_stock_self.instock[this.sku_].sizes[this.size_])
+      }
+      return 0
+    },
+    needAmountInStore () {
+      // console.log('...................')
+      return store.state.needAmount[this.sku_+'_'+this.size_]
+    },
+
+  },
+  template: document.getElementById('sku-size-cell').innerHTML,
+})
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+
+var bus = new Vue();
+
+var fetchResouce = (params) => {
+  return new Promise((res, rej) => {
+    params.contentType = "application/json; charset=utf-8"
+    params.async = false
+    params.success = (data) => {
+      res(data)
+    }
+    params.error = (data) => {
+      console.log('ajax err:' + params.url)
+      rej(data)
+    }
+    console.log(params)
+    try {
+      $.ajax(params)
+    } catch (e) {
+      console.log(e)
+    }
+  })
+}
+
+$$ValidSizesAP = []
+$$ValidSizesEQ = []
+$$ValidSizesFW = []
+$$ValidSizesALL = []
+
+var initData = async () => {
+  // localstorage_sku_pre_check = await fetchResouce({
+  //     type: 'GET',
+  //     url: '/epr/filtered',
+  //     dataType: 'json',
+  //     timeout: 300,
+  //   })
+  // localstorage_sku_pre_check = {}
+
+  // http://192.168.1.121:8010/mem?&type=json&key=add_epr
+  localstorage_add_epr = await fetchResouce({
+      type: 'GET',
+      url: '/mem?&type=json&key=add_epr',
+      dataType: 'json',
+      timeout: 300,
+  })
+
+  localstorage_stock_self = await fetchResouce({
+      type: 'GET',
+      url: '/mem?&type=json&key=stock_self',
+      dataType: 'json',
+      timeout: 300,
+  })
+
+  localStorage.setItem('_test_', JSON.stringify(localstorage_stock_self))
+
+  localstorage_valid_sizes = await fetchResouce({
+      type: 'GET',
+      url: '/mem?&type=json&key=valid_sizes',
+      dataType: 'json',
+      timeout: 300,
+  })
+
+
+
+  const ValidSizesFWAdultStr = '==成人鞋,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10,10.5,11,11.5,12,12.5,13'
+
+  const ValidSizesFWChild01Str = '==大童鞋,3.5Y,4Y,4.5Y,5Y,5.5Y,6Y,6.5Y,7Y'
+
+  const ValidSizesFWChild02Str = '==中童鞋,11C,11.5C,12C,12.5C,13C,13.5C,1Y,1.5Y,2Y,2.5Y,3Y'
+
+  const ValidSizesFWChild03Str = '==小童鞋,2C,3C,4C,5C,6C,7C,8C,9C,10C,10.5C,11C,11.5C,12C,12.5C,13C,13.5C,1Y,1.5Y,2Y,2.5Y,3Y'
+
+  const ValidSizesFWChild04Str = '==鞋其他,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9,9.5,10,10.5,11,11.5,12,12.5,13,13.5,14,15,16,17,XS,S,1C,2C,3C,4C,5C,6C,7C,8C,9C,10C,10.5C,11C,11.5C,12C,12.5C,13C,13.5C,1Y,1.5Y,2Y,2.5Y,3Y,3.5Y,4Y,4.5Y,5Y,5.5Y,6Y,6.5Y,7Y'
+
+  const ValidSizesAPStr = '==服装,XS,S,M,L,XL,2XL,3XL,4XL,XXL,XXXL,XXXXL,26,28,32,34,36,38,40,42,44,32A,32B,32C,32D,32DD,32E,34A,34B,34C,34D,34DD,34E,36A,36B,36C,36D,36E,38A,38B,38C,38D,38E,1SIZE,5XL,6X,2T,3T,2XLT,2XL-T,3XLT,3XL-T,4T,4XLT,XLD-E,XL-S,XLT,XL-T,XSA-C,XXLT,S/M,SA-C,SD-E,S-T,AL,AM,L/XL,LA/B,LA-C,LD-E,LT,L-T,M/L,MA/B,MA-C,MD-E,0,2,4,5,6,7,8,10,12,18,24,48,0-3,0-6,3-4.5,3-6,5-6,5-7,6-9,6-12,7-1/4,9-12,12-18,12-24,18-24,24-36,28-L,30-L,32-L,34-L,36-L,30B,30C,30D,30DD,30EMISC,XXS'
+  
+
+  const ValidSizesEQStr = '==配件,MISC,S,M,L,XL,1,2,3,4,5,7,XS/S,S/M,M/L,L/XL,4-5.5,6-7.5,8-9.5,10-,12-,14-16,1SIZE,ML,PRO,6,8,9,10,11,XXS,XS'
+
+
+
+  const ValidSizesAllStr = [
+    ValidSizesFWAdultStr,
+    ValidSizesFWChild01Str,
+    ValidSizesFWChild02Str,
+    ValidSizesFWChild03Str,
+    ValidSizesFWChild04Str,
+    ValidSizesAPStr,
+    ValidSizesEQStr
+  ].join(',')
+
+  const findValidSizes = (str) => {
+    const valids = []
+    const arr = str.split(',')
+    arr.forEach((size) => {
+      if (localstorage_valid_sizes[size] && valids.indexOf(size) === -1) {
+        valids.push(size)
+      }
+    })
+    return valids;
+  }
+
+  // 获取所有的未定义尺码
+  const findInValidSizes = (str) => {
+    const invalid_localstorage_valid_sizes = JSON.parse(JSON.stringify(localstorage_valid_sizes))
+
+    const arr = str.split(',')
+    arr.forEach((size) => {
+      if (localstorage_valid_sizes[size]) {
+        delete invalid_localstorage_valid_sizes[size]
+      }
+    })
+    return invalid_localstorage_valid_sizes;
+  }
+
+  $$ValidSizesFW = findValidSizes(ValidSizesFWAdultStr)
+  $$ValidSizesFWAdult = findValidSizes(ValidSizesFWAdultStr)
+  $$ValidSizesFWChild01 = findValidSizes(ValidSizesFWChild01Str)
+  $$ValidSizesFWChild02 = findValidSizes(ValidSizesFWChild02Str)
+  $$ValidSizesFWChild03 = findValidSizes(ValidSizesFWChild03Str)
+  $$ValidSizesFWChild04 = findValidSizes(ValidSizesFWChild04Str)
+  $$ValidSizesEQ = findValidSizes(ValidSizesEQStr)
+  $$ValidSizesAP = findValidSizes(ValidSizesAPStr)
+  $$ValidSizesALL = findValidSizes(ValidSizesAllStr)
+
+  $$InvalidSizesALL = findInValidSizes(ValidSizesAllStr)
+
+  $$SizesALL = $$ValidSizesALL.concat(Object.keys($$InvalidSizesALL))
+
+  // alert(JSON.stringify($$InvalidSizesALL))
+  // alert(JSON.stringify($$SizesALL))
+
+  // console.log('$$ValidSizesALL', $$ValidSizesALL)
+  // console.log('$$ValidSizesFW', $$ValidSizesFW)
+  // console.log('$$ValidSizesEQ', $$ValidSizesEQ)
+  // console.log('$$ValidSizesAP', $$ValidSizesAP)
+
+  app.sizes = $$ValidSizesFW
+
+  // app.sizes = $$SizesALL
+
+  // console.log('init $$ValidSizesALL:' )
+  // console.log($$ValidSizesALL)
+  // console.log('init $$ValidSizesALL:---------------' )
+
+  $$reloadSkus(localstorage_sku_pre_check)
+  // app.search('')
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 最上层容器
+var app = new Vue({
+  el: '#app',
+  components: {
+  },
+  data: function(){
+    return {
+      pageIdx: 1,
+      lineNo: '',
+      controllerMode: 'input',
+      markSkus: {},
+      skuInfoMap: {},
+      skusStr: '',
+      dataIdsVisible: [],
+      searchKey: '',
+      cellHeight: 130,
+      sizeWidth: 36,
+      skuInfoWidth: 100,
+      sizes: [],
+      sizeScrollLeft: 0,
+      headHeight: 0,
+      bodyHeight: 0,
+      tailHeight: 0,
+      startSkuIdx: 0,
+      dataIdsHide: {},
+      showController: true,
+      hideX: false,
+      priceRate: 1,
+      imgServer: imgServer,
+      addEpr: localstorage_add_epr,
+    }
+  },
+  watch: {
+    hideX: function(v) {
+      this.refreshXitems()
+    },
+    'dataIdsVisible': function(oldv, newv) {
+      console.log('dataIdsVisible changed' + JSON.stringify(newv))
+    },
+    'searchKey': function(oldv, newv) {
+      this.search()
+    },
+    dataIdsHide: function(v) {
+      localStorage.setItem('hide_skus', JSON.stringify(v))
+    },
+    // 加载用户输入的sku列表
+    skusStr: function(val) {
+      localStorage.setItem('skus_str', val)
+      $('#iptSkus').blur()
+
+      var tmp = val.split("\n")
+
+      //排除第一行标题
+      if (tmp.length > 1 && tmp[0].length !== tmp[1].length) tmp.splice(0, 1)
+      store.state.skus = tmp
+
+
+      function unique (arr) {
+        const seen = new Map()
+        return arr.filter((a) => !seen.has(a) && seen.set(a, 1))
+      }
+
+      $$dataMap = $$dataMap || {}
+      $$dataSkuList = unique(store.state.skus)
+      $$dataSkuList = $$dataSkuList.filter(v => v)
+      $$searchResult = $$dataSkuList
+      $$allLength = $$dataSkuList.length
+
+      // console.log('store.state.skus:' + store.state.skus)
+
+      const self = this
+      // 模拟滚动
+      setTimeout(() => {
+        self.search()
+        self.loadPage(1)
+      }, 0)
+
+    },
+  },
+  computed: {
+    // 自己的skus
+    xSkusInfo () {
+      return store.state.skuInfoMap || {}
+    },
+    // priceRate () {
+    //   return store.state.priceRate || 1
+    // },
+    rowsRange() {
+      return store.state.rowsRange
+    },
+    overSkuSizeInfo () {
+      return store.state.overSkuSizeInfo
+    },
+    currentScroller() {
+      return store.state.currentScroller
+    },
+    showPic () {
+      return store.state.showPic
+    },
+  },
+  methods: {
+    reloadImg(imgId, src) {
+      $('#'+imgId).attr('src', src)
+    },
+    stockCount (sku, size) {
+      let sum = 0
+      if (localstorage_stock_self.instock[sku] && localstorage_stock_self.instock[sku].sizes && parseInt(localstorage_stock_self.instock[sku].sizes[size]) > 0) {
+        if (parseInt(localstorage_stock_self.instock[sku].sizes[size]) > 0) {
+
+        }
+        sum += parseInt(localstorage_stock_self.instock[sku].sizes[size])
+      }
+      if (localstorage_stock_self.onroad[sku] && localstorage_stock_self.onroad[sku].sizes && parseInt(localstorage_stock_self.onroad[sku].sizes[size]) > 0) {
+        sum += parseInt(localstorage_stock_self.onroad[sku].sizes[size])
+      }
+      return sum
+    },
+
+    mouseDown: function() {
+      this.controllerMode = 'del'
+    },
+    mouseUp: function() {
+      this.controllerMode = 'input'
+    },
+    loadPage: function(pageIdx) {
+      this.pageIdx = pageIdx
+      var pagePartsInfo = util.getPagePartsInfo(pageIdx)
+      console.log('pagePartsInfo:' + JSON.stringify(pagePartsInfo))
+      // this.skus = pagePartsInfo.visibleCells
+      this.dataIdsVisible = pagePartsInfo.visibleCells
+      this.headHeight = pagePartsInfo.headHeight
+      this.bodyHeight = pagePartsInfo.bodyHeight
+      this.tailHeight = pagePartsInfo.tailHeight
+      this.startSkuIdx = pagePartsInfo.startSkuIdx
+
+      // $$dataSkuList
+      // store.state.skus = [pageIdx]
+
+      tool.timer('page loadstart')
+
+      // 获得没有获得过的信息
+      $$fetchStockData(this.dataIdsVisible)
+
+      tool.timer('page loadend')
+      util.syncSkuInfoPanel()
+    },
+    Mark: function() {
+      const sku = store.state.overSkuSizeInfo.sku
+      const marked = !this.markSkus[sku]
+      console.log('marked:' + marked)
+      if(marked) {
+
+        this.markSkus[sku] = 1
+
+        const skusCurrent = JSON.parse(JSON.stringify(store.state.skus))
+        const find = skusCurrent.indexOf(sku)
+        if (find > -1) {
+          skusCurrent.splice(find, 1)
+          skusCurrent.unshift(sku)
+          store.state.skus = skusCurrent
+          $$searchResult = $$dataSkuList = store.state.skus
+
+          this.refreshXitems()
+          // $$renderDatas()
+          this.loadPage(this.pageIdx)
+
+          console.log(skusCurrent)
+
+          // console.log(localStorage.getItem('skus_str'))
+          // console.log(skusCurrent.join("\n"))
+          localStorage.setItem('skus_str', skusCurrent.join("\n"))
+        }
+      } else {
+        this.markSkus[sku] = null
+        delete this.markSkus[sku]
+        // localStorage.setItem('skus_str', skusCurrent.join("\n"))
+      }
+
+      const markedCopy = JSON.parse(JSON.stringify(this.markSkus))
+      // markedCopy = this.markSkus
+      this.markSkus = markedCopy
+
+
+      localStorage.setItem('mark_skus', JSON.stringify(this.markSkus))
+
+    },
+    refreshXitems: function() {
+      const v = this.hideX
+      console.log('this.hideX:' + v)
+      if (v) {
+        $$searchResult = $$dataSkuList.filter((sku) => !this.dataIdsHide[sku])
+      } else {
+        $$searchResult = $$dataSkuList
+      }
+      $$renderDatas()
+    },
+    clearCache: () => {
+      var emptyMap = JSON.stringify({})
+      localStorage.setItem('hide_skus', emptyMap)
+      localStorage.setItem('skus_str', '')
+      localStorage.setItem('need_amount', emptyMap)
+      localStorage.setItem('mark_skus', emptyMap)
+      window.location.reload()
+    },
+    exportxlsx: () => {
+      const name = '报货_' + moment().format('YYYY-MM-DD')
+      $.ajax({
+        type: 'POST',
+        url: '/export/xlsx',
+        // data to be added to query string:
+        data: {
+          name: name,
+          localstorage_hide_skus: JSON.stringify(app.dataIdsHide),
+          localstorage_skus_str: JSON.stringify(store.state.skus),
+          localstorage_need_amount: JSON.stringify(localstorage_need_amount),
+          sizes: app.sizes,
+        },
+        // type of data we are expecting in return:
+        dataType: 'json',
+        timeout: 1000 * 60 * 5,
+        // context: $('body'),
+        success: function(data){
+          // console.log(data)
+          window.location.href="./"+name+".xlsx"
+        },
+        error: function(xhr, type){
+          alert('Ajax error!')
+        }
+      })
+
+    },
+    getPrice: function(sku) {
+      if (this.skuInfoMap[sku]) {
+        return (this.skuInfoMap[sku].RETAILPRICE *0.395 *1.3).toFixed(2)
+      }
+      return '-'
+    },
+    getInfo: function(sku, col) {
+      if (this.skuInfoMap[sku]) {
+        // console.log(sku)
+        // console.log(this.skuInfoMap)
+        return this.skuInfoMap[sku][col]
+      }
+      return '-'
+    },
+    overSku: function(sku) {
+      store.state.currentScroller = 'dataContainer_sku_content'
+      store.commit('overSkuSize', {
+        sku,
+        size: null,
+      })
+    },
+    overSkuSize: function(sku, size) {
+      store.state.currentScroller = 'dataContainer_size_content'
+      try {
+        let top = ($('#row_' + sku).position().top - 25)
+        if (top <= 0) top = 0
+        $('#header_float').css('top', top + 'px')
+
+        // $('#header_float').show()
+      } catch (e) {}
+
+      store.commit('overSkuSize', {
+        sku,
+        size,
+      })
+
+      if (app.controllerMode === 'del') {
+        console.log('del:' + sku + '/' + size)
+        store.commit('setNeedAmount', {sku: sku, size: size, needamount: 0})
+        // bus.$emit('sku_size_clear_' + sku + '_' + size);
+      } else {
+      }
+    },
+
+    getStockInfoMap: function(sku, size) {
+      console.log('getStockInfoMapgetStockInfoMapgetStockInfoMapgetStockInfoMap:' + sku)
+      console.log(this.skuInfoMap[sku])
+
+      if(this.skuInfoMap[sku]) {
+        return this.skuInfoMap[sku]
+      } else {
+        console.log('no :' + sku + '/' + size)
+        // alert('no')
+      }
+      // return false
+      // if ($$StockInfoMap[sku]) {
+      //   return $$StockInfoMap[sku]
+      // }
+      // return 'xxx'
+    },
+    showPic: function() {
+
+    },
+    search: async function() {
+      const numKey = (''+this.searchKey).replace('-', '')
+      if (numKey.length === 9) {
+
+        const skuKey = numKey.substr(0, 6) + '-' + numKey.substr(6, 9)
+        // 找到第几个，滚到那里去
+        console.log('search ' + skuKey)
+        let find = false
+        $$dataSkuList.forEach((sku, idx) => {
+          if (sku === skuKey) {
+            find = idx
+          }
+        })
+        console.log(find)
+        if (find >= 0) {
+          let pageIdx = 1
+
+          const cellHeight = 130
+          var onepageHeight = $('#dataContainer_size_parent').height()
+          var onepageCellCount = Math.floor(onepageHeight / cellHeight)
+          pageIdx = Math.ceil(find / onepageCellCount)
+
+          // await this.loadPage(pageIdx)
+          this.goToLine(find + 1)
+
+          console.log('load Page:' + pageIdx)
+        }
+      }
+    },
+    goToLine: function(line) {
+      // console.log('goToLine')
+      // console.log(this.lineNo)
+      // console.log('line')
+      // console.log(line)
+      const cellHeight = 130
+      if (!line && this.lineNo) {
+        line = this.lineNo
+      }
+      line = parseInt(line)
+      // console.log('line end')
+      // console.log(line)
+      $('#dataContainer_size_parent').scrollTop(cellHeight * (line-1))
+    },
+    infoLoaded: function(infos) {
+      // alert('infoLoaded')
+      // for(var sku in infos) {
+      //   // const price = (infos[sku].RETAILPRICE *0.395 *1.3).toFixed(2)
+      //   // $('#price_' + sku).html(price)
+
+      //   bus.$emit('sku_info_refresh_' + sku, infos[sku]);
+
+      // }
+
+    },
+  },
+  destroyed: function() {
+    // bus.$off('sku_info_loaded', this.infoLoaded);
+  },
+  created: function () {
+    const self = this;
+    // bus.$on('sku_info_loaded', this.infoLoaded)
+
+    ;(async () => {
+      try {
+        await initData()
+      } catch (e) {
+        console.log(e)
+      }
+      console.log('initData done')
+      this.dataIdsHide = localstorage_hide_skus
+      this.skusStr = localstorage_skus_str || ''
+      this.markSkus = localstorage_mark_skus
+    })()
+
+  },
+});
+
+
+$('#dataContainer_size_content').parent().scroll(scrollFromSizeToSku);
+
+$('#dataContainer_size_content').parent().scroll(() => {
+  util.syncSkuInfoPanel()
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// jwerty.key('T', function () {
+//   store.state.showPic = !store.state.showPic
+//   var heightConfig = {
+//     'true': 130,
+//     'false': 30,
+//   }
+//   app.cellHeight = heightConfig[''+store.state.showPic]
+// });
+
+
+// jwerty.key('T', function () {
+//   app.sizes = ['XS','S','M','L','XL']
+//   app.sizeWidth = 50
+//   $('#dataContainer_size_parent').scrollLeft(0)
+// });
+
+
+jwerty.key('Q', function () {
+  // console.log($$ValidSizesAP)
+  app.sizes = $$ValidSizesAP
+  // app.sizes = ['XS','S','M','L','XL','XXL','XXXL','XXXXL','2XL','3XL','4XL']
+  app.sizeWidth = 32
+
+  $('#dataContainer_size_parent').scrollLeft(0)
+});
+
+jwerty.key('W', function () {
+  // console.log($$ValidSizesFW)
+  app.sizes = $$ValidSizesFW
+  app.sizeWidth = 36
+
+  $('#dataContainer_size_parent').scrollLeft(0)
+});
+
+jwerty.key('E', function () {
+  // console.log($$ValidSizesEQ)
+  app.sizes = $$ValidSizesEQ
+  app.sizeWidth = 40
+
+  $('#dataContainer_size_parent').scrollLeft(0)
+});
+
+
+jwerty.key('T', function () {
+  // console.log($$ValidSizesEQ)
+  const tmp = {}
+  const sizes = '3.5Y,4Y,4.5Y,5Y,5.5Y,6Y,6.5Y,7Y,2C,3C,4C,5C,6C,7C,8C,9C,10C,10.5C,11C,11.5C,12C,12.5C,13C,13.5C,1Y,1.5Y,2Y,2.5Y,3Y'.split(',')
+  sizes.forEach((size) => {
+    tmp[`${size}`] = `${size}`
+  })
+  const sizesList = []
+  for(const size in tmp){
+    sizesList.push(size)
+  }
+  app.sizes = sizesList
+  app.sizeWidth = 40
+
+  $('#dataContainer_size_parent').scrollLeft(0)
+});
+
+
+jwerty.key('R', function () {
+  // console.log($$ValidSizesALL)
+  app.sizes = $$ValidSizesALL
+  app.sizeWidth = 36
+
+  $('#dataContainer_size_parent').scrollLeft(0)
+});
+
+
+
+
+jwerty.key('F', function () {
+  store.state.currentScroller = 'dataContainer_size_content'
+  var height = Math.floor($('#dataContainer_size_parent').height() / app.cellHeight ) * app.cellHeight
+  $('#dataContainer_size_parent').scrollTop(
+    $('#dataContainer_size_content').parent()[0].scrollTop + height
+  )
+});
+
+
+jwerty.key('D', function () {
+  store.state.currentScroller = 'dataContainer_size_content'
+  var height = Math.floor($('#dataContainer_size_parent').height() / app.cellHeight ) * app.cellHeight
+  $('#dataContainer_size_parent').scrollTop(
+    $('#dataContainer_size_content').parent()[0].scrollTop - height
+  )
+});
+
+jwerty.key('X', function () {
+  const dataIdsHide = app.dataIdsHide
+  const sku = app.overSkuSizeInfo.sku
+  if (sku) {
+    if (!dataIdsHide[app.overSkuSizeInfo.sku]) {
+      dataIdsHide[app.overSkuSizeInfo.sku] = 1
+    } else {
+      dataIdsHide[app.overSkuSizeInfo.sku] = null
+      delete dataIdsHide[app.overSkuSizeInfo.sku]
+    }
+    // app.$set('dataIdsHide', JSON.parse(JSON.stringify(dataIdsHide)) )
+    app.dataIdsHide = JSON.parse(JSON.stringify(dataIdsHide))
+    app.refreshXitems()
+
+  }
+});
+
+
+jwerty.key('S', function () {
+  let skuInfoWidth = app.skuInfoWidth
+  // let skuInfoWidth = app.skuInfoExt
+  if (skuInfoWidth === 100) {
+    skuInfoWidth = 370
+  } else {
+    skuInfoWidth = 100
+  }
+  app.skuInfoWidth = skuInfoWidth
+});
+
+
+jwerty.key('P', function () {
+  let showController = !app.showController
+  app.showController = showController
+});
+
+
+jwerty.key('H', function () {
+  // alert('F1')
+  let hideX = !app.hideX
+  app.hideX = hideX
+});
+
+
+jwerty.key('A', function () {
+  app.Mark()
+});
+
+setTimeout(() => {
+  new ClipboardJS('.btn');
+}, 1)
+
+</script>
+</body>
+</html>

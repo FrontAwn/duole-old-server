@@ -1,0 +1,23 @@
+html
+  head(lang='zh-cn')
+    meta(charset='utf-8')
+    title Blebee-app Tracker Detail
+    style(media='screen', type='text/css')
+      include ../assets/css/main.css
+    script(type='text/javascript')
+      include ../assets/js/const.js
+  body
+    div(style='padding: 10px 30px;border:1px solid #ccc;')
+      div
+        pre#message
+
+
+    script.
+      // 最原始的列表数据
+      var message = '!{message}';
+      console.log('message');
+      console.log(message);
+
+      try {
+        document.getElementById('message').innerHTML = syntaxHighlight(JSON.stringify(JSON.parse(message), undefined, 4));
+      } catch (e) {}

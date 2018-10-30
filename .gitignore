@@ -1,0 +1,10 @@
+node_modules
+downloads
+log
+template
+uploads
+views-----bk
+.gitignore.swp
+*.txt
+.DS_Store
+package-lock.json

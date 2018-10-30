@@ -1,0 +1,55 @@
+html
+  head(lang='zh-cn')
+    meta(charset='utf-8')
+    title Blebee-app Tracker
+    style(media='screen', type='text/css')
+      include ../assets/css/main.css
+    script(type='text/javascript')
+      include ../assets/js/const.js
+  body
+    div#app
+      form.container(style='padding: 0px;margin: 0px;' method='get')
+        header(style='position:fixed;top:0;display:flex;flex:1;width:100%;background:#32C24D;padding:5px 0;z-index:999;')
+          div(style='width:100px;')
+            a(href="/")
+              img(src='/img/logo-search.png' style='width:44px;margin-left:22px;')
+          div(style='flex-grow:1;color:#fff;')
+            textarea(id="textarea_fake" style='width:100%;' onfocus='javascript:autoSizeTextArea(true);' class='search__input')
+
+            textarea(id="textarea_auto" name='data' style='width:100%;visibility: hidden;display:none;background:#fff;color:#000;font-size: 18px;' onblur='javascript:autoSizeTextArea(false);' class='search__input')
+              | #{query.data}
+
+            // span(style='padding-right:0px;') 白名单
+            // input(type='radio' name='whiteList' id="wlOn" value="on" checked=query.whiteList==='wlOn' ? true : false style='margin-left:10px;')
+            // label(for="wlOn") On
+            // input(type='radio' name='whiteList' id="wlOff" value="off" checked=query.whiteList==='wlOff' ? true : false style='margin-left:10px;')
+            // label(for="wlOff") Off
+
+          div(style='padding:1px 10px 0 10px;')
+            input(type='submit' style='' class='search__submit' value='搜索')
+
+          div(style='padding:1px 10px 0 10px;display:flex;flex-direction:row;')
+            //- input(type='submit' style='background:#fff;line-height:32px;height:38px;font-size:14px;' value='搜索')
+
+            div(v-cloak :style="'width:37px;height:37px;background: #'+(collapseList?'ccc':'fff')+';border: 1px solid #000;text-align:center;line-height:40px;font-size:28px;z-index:998;'" @click="collapseList=!collapseList") 叠
+
+            div(v-cloak :style="'width:37px;height:37px;background: #'+(showFilter?'ccc':'fff')+';border: 1px solid #000;text-align:center;line-height:40px;font-size:28px;z-index:998;'" @click="showFilter=!showFilter") 筛
+
+
+      div(v-cloak style='padding:60px 0px 50px 0px;')
+        | <translator-list :ls_="searchResultList" :collapse_list_="collapseList" />
+
+      div(v-cloak v-if="showFilter" id="filter" style='position:fixed;right:-1px;top:50px;border:1px solid #ccc;color:#000;border-right:none;font-size:12px;z-index:998;background:#fff;padding:10px 10px;overflow-y:scroll;max-height:550px;')
+        entry-keys(v-if="showFilter" :entrykeys_map_="entrykeysMap")
+
+    script.
+      // 最原始的列表数据
+      var searchResultList = !{JSON.stringify(ls)};
+      var searchResultListSifted = [];
+
+    include translator.html
+
+    script.
+      jQuery('#filter').css({
+        'max-height': jQuery(window).height() - 70,
+      });

@@ -1,0 +1,83 @@
+<html>
+  <style type="text/css">
+  html {
+    padding: 0;
+    margin: 0;
+    font-size: 100%;
+    font-family:tahoma,arial,'Hiragino Sans GB','\5b8b\4f53',sans-serif
+  }
+  body {
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    background:#fff;
+  }
+  input, button {
+    -webkit-app-region: no-drag;
+  }
+  * {
+    -webkit-box-sizing:border-box;
+    box-sizing:border-box;
+    -webkit-user-select:none;
+    -user-select:none;
+    box-sizing:border-box;
+  }
+  p {
+    -webkit-user-select:auto;
+    -user-select:auto; 
+  }
+  .selecable {
+    -webkit-user-select:auto;
+    -user-select:auto;
+  }
+  h1 {
+    font-size: 20px;
+    /*font-weight: normal;*/
+  }
+  h2 {
+    font-size: 18px;
+    /*font-weight: normal;*/
+  }
+  h3 {
+    font-size: 16px;
+    /*font-weight: normal;*/
+  }
+  </style>
+  <body>
+    <div style="display:flex; height:38px; background:#F6F6F6; -webkit-app-region: drag; padding-top:7px;">
+      <div style="width:80px;"></div>
+      <div>
+        <input id="clip" type="text" placeholder="请输入货号" style="height:24px;" />
+      </div>
+      <div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex:1; flex-direction:column; ">
+      <h1>货品信息</h1>
+
+      <h2>流速</h2>
+
+      <h3>成本</h3>
+      
+
+      <p class="selecable">aaaaaaabcc</p>
+
+      <input id="clip2" type="text" value="">
+
+    </div>
+  </body>
+  <script type="text/javascript">
+  const ipcRender = require('electron').ipcRenderer;
+  console.log(ipcRender)
+
+  alert( {{ query }} )
+
+  // ipcRender.send('checkRate', {});
+  ipcRender.on('getClipboardText', (evt, data) => {
+    console.log(data)
+    document.getElementById('clip').value = data.clipboardText
+  })
+  </script>
+</html>

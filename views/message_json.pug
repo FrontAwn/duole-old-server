@@ -1,0 +1,17 @@
+<pre id='response_#{reskey}'></pre>
+
+script.
+  // 最原始的列表数据
+  var message = '!{message}';
+  var extra = message.substring(0, message.indexOf('request=') );
+  var request = message.substring( message.indexOf('request=')+'request='.length , message.indexOf(', response=') );
+  var response = message.substring( message.indexOf(', response=')+', response='.length );
+  if (response.substring(response.length-1) == ']') {
+    response = response.substring(0, response.length - 1);
+  }
+
+  try {
+    document.getElementById('response_#{reskey}').innerHTML = syntaxHighlight(JSON.stringify(JSON.parse(response), undefined, 4));
+  } catch (e) {
+    document.getElementById('response_#{reskey}').innerHTML = '没找到数据';
+  }

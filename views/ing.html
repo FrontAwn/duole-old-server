@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ing</title>
+  <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+  <link rel="stylesheet" href="./assets/css/duole.css">
+  <style type="text/css">
+  </style>
+</head>
+<body>
+<div id="app" class="scrollableContainer">
+  <header style="position: fixed;opacity: 1; z-index: -1;top:0; left: 0; opacity: 0;">
+  </header>
+  <div>
+    {{ls}}
+  </div>
+</div>
+<script type="text/javascript" src="./assets/js/es6_promise.js"></script>
+<script type="text/javascript" src="./assets/js/moment.js"></script>
+<script type="text/javascript" src="./assets/js/vue_v1.min.js"></script>
+<script type="text/javascript" src="./assets/js/vuex.js"></script>
+<script type="text/javascript" src="./assets/js/jwerty.js"></script>
+
+<script type="text/javascript">
+  Vue.use(Vuex)
+
+  const store = new Vuex.Store({
+    state: {
+      skus: [],
+      overSkuSizeInfo: {
+
+      },
+      rowsRange: {
+        min: 0,
+        max: 1,
+      },
+      showPic: true,
+      currentScroller: 'dataContainer_sku_content',
+    },
+    mutations: {
+      overSkuSize (state, payload) {
+        state.overSkuSizeInfo = {
+          sku: payload.sku,
+          size: payload.size,
+        }
+      }
+    }
+  });
+  // store.commit('overSkuSize', {sku: 'skuaaa', size: 'sizebbb'})
+  // console.log(store.state.overSkuSizeInfo)
+
+</script>
+<script type="text/javascript" src="./assets/js/zepto.js"></script>
+<script type="text/javascript">
+</script>
+
+
+
+<div id="sku-size-cell" style="display: none;">
+  <div>
+  </div>
+</div>
+
+<script type="text/javascript">
+
+Vue.component('sku-size-cell', {
+  props: ['sku_', 'size_', 'cellHeight_'],
+  data: () => {
+    return {
+      // skuInfo: {},
+    }
+  },
+  created: function () {
+  },
+  watch: {
+  },
+  destroyed: function() {
+  },
+  methods: {
+  },
+  computed: {
+  },
+  template: document.getElementById('sku-size-cell').innerHTML,
+})
+
+</script>
+
+<script type="text/javascript">
+
+var bus = new Vue();
+
+
+// 最上层容器
+var app = new Vue({
+  el: '#app',
+  components: {
+  },
+  data: function(){
+    return {
+      ls: {{JSON.stringify(ls)}},
+    }
+  },
+  watch: {
+  },
+  computed: {
+  },
+  methods: {
+    Mark: function() {
+    },
+  },
+  destroyed: function() {
+    bus.$off('sku_info_loaded', this.infoLoaded);
+  },
+  created: function () {
+    const self = this;
+    bus.$on('sku_info_loaded', this.infoLoaded)
+
+    // ;(async () => {
+    //   try {
+    //     await initData()
+    //   } catch (e) {
+    //     console.log(e)
+    //   }
+    //   console.log('initData done')
+    //   this.dataIdsHide = localstorage_hide_skus
+    //   this.skusStr = localstorage_skus_str || ''
+    //   this.markSkus = localstorage_mark_skus
+    // })()
+
+  },
+});
+
+// });
+
+</script>
+</body>
+</html>

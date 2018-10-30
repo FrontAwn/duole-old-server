@@ -1,0 +1,767 @@
+<script src="/js/vue.js"></script>
+<script type="text/javascript">
+  Vue.config.unsafeDelimiters = ['{{{', '}}}']
+</script>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/moment.js"></script>
+<script src="/js/store.js"></script>
+
+
+<div id="entry-keys" style="display: none;">
+	<div style="position: relative;">
+    <div style="padding: 0 0 10px 0;">
+      <button @click="setFilter('all')">全选</button>
+      <button @click="setFilter('none')">全不选</button>
+      <button @click="setFilter(['app.system.page', 'app.request.time'])">页面轨迹</button>
+    </div>
+		<div v-for='k in keys'>
+			<entry-color :key_="k"></entry-color>
+			<input :id="k" type='checkbox' :value="k" v-model="entrykeys_map_[k].checked"> <label :for="k">{{k}}</label>
+		</div>
+	</div>
+</div>
+
+
+<div id="time-diff" style="display: none;">
+  <div style="padding-top: 10px;">
+    <font v-if="diff < 0" color="#999">{{(diff / 1000).toFixed(2)}}s</font>
+    <font v-else-if="diff < 1000*60" color="#000">{{(diff / 1000).toFixed(2)}}s</font>
+    <font v-else-if="diff > 1000*60" color="#f00">{{(diff / 1000/60).toFixed(2)}}m</font>
+  </div>
+</div>
+
+
+<div id="json-formater" style="display: none;">
+  <div>
+    <pre :id="id_"></pre>
+  </div>
+</div>
+
+
+<div id="translator-item">
+    <app-request-time v-if="v_.entry_key === 'app.request.time'" :v_="v_" :k_="k_"></app-request-time>
+    <app-system-page v-else-if="v_.entry_key === 'app.system.page'" :v_="v_" :k_="k_" :collapse_list_="collapse_list_"></app-system-page>
+    <app-takeaway-cart_click v-else-if="v_.entry_key === 'app.takeaway.cart_click'" :v_="v_" :k_="k_"></app-takeaway-cart_click>
+    <translator-item-null v-else :v_="v_" :k_="k_"></translator-item-null>
+</div>
+
+
+<!-- app.request.time -->
+<table id="app-request-time" style="display: none;">
+	<tr>
+    <td></td>
+    <td title="boot_time" v-if="v_._device_type === 'android'">{{v_.boot_time}}</td>
+    <td title="log_id" v-if="v_._device_type === 'ios'">{{v_.log_id}}</td>
+    <td title="server_time">{{v_.server_time}}</td>
+   	<td :title="v_.received_time+' +8小时'">
+   		{{v_.client_time.substring(0)}}
+   		<br />
+       <time-diff :s_="k_-1" :e_="k_" :update_="v_.boot_time"></time-diff>
+   		<br />
+       <button v-if="v_.entry_detail.duration > 300" class="tag__red">慢</button>
+
+      <br />
+
+   	</td>
+		<td><entry-color :key_="v_.entry_key"></entry-color></td>
+   	<td>
+      version: <font color="#FF4700">{{v_.package_info.version}}</font><br/ >
+      bssid: <font color="#00CE00">{{v_.bssid}}</font><br/ >
+      device_id: <font color="#2196F3">{{v_.device_id}}</font><br/ >
+      gid: <font color="#5D4037">{{v_.gid}}</font><br/ >
+   	</td>
+	  <td>
+      <div class="scrollable">
+   	 	<b :style="'color:' + ((v_.entry_detail.duration > 300) ? 'red':'') + ';'">app.request.time</b>: <button @click="query" v-if="v_.entry_detail.requestId > 0">后端记录</button> <a v-if="v_.entry_detail.requestId > 0" :href="'/comm_search/message/'+v_.entry_detail.requestId+'/format'" target="_blank">新窗口</a>
+      <pre :id="'json_app_request_time_'+k_"></pre>
+    </div>
+   	</td>
+  	<td><div class="scrollable"><pre :id="'json_app_request_time__backend_'+k_">{{message}}</pre></div></td>
+  </tr>
+</table>
+
+
+<table id="app-system-page" style="display: none;">
+	<tr @click="collapseListByIdx" style="border:1px solid #333;">
+    <td>
+      <div style="text-align:center;color:#C7C7C7;font-size:40px;">{{k_+1}}</div>
+    </td>
+    <td title="boot_time" v-if="v_._device_type === 'android'">{{v_.boot_time}}</td>
+    <td title="log_id" v-if="v_._device_type === 'ios'">{{v_.log_id}}</td>
+    <td title="server_time">{{v_.server_time}}</td>
+   	<td :title="v_.received_time+' +8小时'">
+   		{{v_.client_time.substring(0)}}
+   		<br />
+   		<time-diff :s_="k_-1" :e_="k_" :update_="v_.boot_time"></time-diff>
+<!-- 
+      <br />
+       -->
+      <p v-if="collapse_list_" style='font-size:13px;color:#8E8E8E;'>{{collapseText=='展开'?' ↓':'↑'}}</p>
+   	</td>
+		<td><entry-color :key_="v_.entry_key"></entry-color></td>
+   	<td>
+   	 	<app-page-name :page_="v_.entry_detail.pageName"></app-page-name>
+   	</td>
+	  <td>
+   	 	<b>app.system.page</b>
+      <br />
+      <pre :id="'json_app_system_page_'+k_"></pre>
+   	 </td>
+  	<td></td>
+  </tr>
+</table>
+
+
+<table id="translator-item-null" style="display: none;">
+	<tr>
+    <td></td>
+    <td title="boot_time" v-if="v_._device_type === 'android'">{{v_.boot_time}}</td>
+    <td title="log_id" v-if="v_._device_type === 'ios'">{{v_.log_id}}</td>
+    <td title="server_time">{{v_.server_time}}</td>
+   	<td :title="v_.received_time+' +8小时'">
+   		{{v_.client_time.substring(0)}}
+   		<br />
+   		<time-diff :s_="k_-1" :e_="k_" :update_="v_.boot_time"></time-diff>
+   		<br />
+   	</td>
+    <td><entry-color :key_="v_.entry_key"></entry-color></td>
+		<td style="color:#999;"><b>{{v_.entry_key}}</b></td>
+		<td colspan="2" class="scrollable">
+      <div class="scrollable">
+      <b>{{v_.entry_key}}</b><a :href="'/json/format/'+ encodeURIComponent(JSON.stringify(v_)) +'/'" target="_blank" style='padding-left: 10px;display: none;'>新窗口</a><br /><json-formater :id_="'jsonformater_'+k_" :json_="v_.entry_detail"></json-formater>
+      </div>
+    </td>
+	</tr>
+</table>
+
+
+<div id="translator-list" style="display: none;">
+	<div style="width:100%;padding-left: 0px;">
+		<table style="width:100%;position: relative;table-layout:fixed;">
+			<thead>
+				<tr style="width: 100%;">
+          <td style="width:76px;"></td>
+          <td style="background: #f1f1f1;width:74px;">
+            <nobr v-if="dataTemplate._device_type === 'android'">boot_time</nobr>
+            <nobr v-if="dataTemplate._device_type === 'ios'">log_id</nobr>
+          </td>
+          <td style="background: #f1f1f1;width:77px;">
+            <nobr>server_time</nobr>
+          </td>
+          <td style="background: #f1f1f1;width:77px;">
+            <nobr>client_time</nobr>
+          </td>
+					<td style="background: #f1f1f1;width:10px;"></td>
+					<td style="background: #f1f1f1;width:160px;">
+			   		<nobr>描述</nobr>
+					</td>
+					<td style="background: #f1f1f1;width:500px;">
+			   		<nobr>entry_info</nobr>
+					</td>
+					<td style="background: #f1f1f1;max-width:600px;">
+			   		<nobr>other_data</nobr>
+					</td>
+				</tr>
+			</thead>
+
+			<template v-for="v,k in ls_">
+			 <translator-item v-show="checkCollapseSelf(k, v)" :v_="v" :k_="k" :collapse_list_="collapse_list_"></translator-item>
+			</template>
+		</table>
+	</div>
+</div>
+
+
+
+<script type="text/javascript">
+
+const pageNameDict = {
+  PhoneLogin: '登录',
+  BindPhone: '绑定手机',
+  SELECT: '首页-选择',
+  Launch: '首页',
+  MINE: '首页',
+  TakeawayShopCart: '自提购物车',
+  Balance: '个人中心-余额页',
+  
+  PickupOrderDetail: '自提订单详情页',
+  PickupCategory: '自提商品列表',
+  PickupShopCart: '自提购物车',
+  PickupOrderConfirm: '自提订单确认页',
+  PickupSearch: '自提商品搜索',
+  TakeawayCategory: '外卖商品列表',
+  PeakOrderScan: '扫一扫',
+  SheetMemberShipCard: '会员卡页',
+  BligoOrderCheckSuccess: '线下扫码购物确认订单成功',
+  BligoOrderCheckSuccessGift: '线下扫码购物确认订单成功(Gift?)',
+  SelfOrder: '便利购-购物车(?)',
+  BliGoShopCart: '便利购-购物车',
+  OnlineOrderConfirm: '订单确认(?)', // 多个??
+  OnlineOrderConfirmSuccess: '订单确认成功(?)', // 多个??
+  PickupOrderConfirmSuccess: '自提订单确认成功',
+  OrderDetail: '订单详情',  // 多个??
+  BreakfastOrderConfirm: '早餐订单确认',
+  BreakfastOrderConfirmSuccess: '早餐订单确认成功',
+  BreakfastOrderConfirmSuccessGift: '早餐订单确认成功(Gift?)',
+  BreakfastOrderDetail: '早餐订单详情',
+  DeliveryMethod: '地址',
+  EditReceiptAddress: '编辑收货地址',  //多个?
+  HomePagePopup: '首页(?)',
+  NavigateMap: '导航地图',
+  TakeawayAddressManagement: '外卖地址管理',
+  TakeawayOrderConfirmSuccess: '外卖订单确认成功',
+  TakeawayOrderConfirmSuccessGift: '外卖订单确认成功(Gift)',
+  TakeawaySearchAddress: '外卖搜索地址',
+  BliGoCategory: 'BliGo分类页',
+  BliGoShopCart: 'BliGo购物车',
+  ScanShopId: '扫店铺码',
+  ScanShopping: '扫码购物落地页',
+  Scan: '扫码(?)',
+
+
+  XXX: '',
+};
+
+const keyCorlorConf = {
+	'app.home_select.fetchShopCart': '#FF4700',
+	'app.home_select.tab_ORDER': '#D0021B',
+	'app.request.time': '#212122',
+	'app.home_select.update_business_id': '#F5A623',
+	'app.order_detail.list_order_delete': '#FCDC00',
+	'app.home_select.tab_SELECT': '#DBDF00',
+	'app.home_select.tab_MINE': '#A4DD00',
+	'app.checkin.timer': '#F3C444',
+	'app.offfline_token.update_token_success': '#68CCCA',
+	'app.system.page': '#00CE00',
+	'app.system.get_privileges_message': '#73D8FF',
+	'app.launch.time': '#AEA1FF',
+	'app.system.get_privileges_location': '#FDA1FF',
+	'app.system.get_privileges_camera': '#B0BC00',
+	'app.peakorder.getwifi': '#68BC00',
+	'app.peakorder.click_scan': '#16A5A5',
+	'app.home_select.take_self': '#009CE0',
+	'app.category.goodlist': '#7B64FF',
+	'app.product.category_one_click': '#FA28FF',
+	'app.home_select.takeaway': '#9F0500',
+	'app.takeaway.unlocate_bomb_box': '#C45100',
+	'app.my_address.tips_prompt': '#808900',
+	'app.takeaway.category_overaddress_pop': '#194D33',
+	'app.takeaway.list_location_bottom': '#0C797D',
+	'app.outsell.category_click': '#0062B1',
+	'app.category.goodlist.takeaway': '#653294',
+	'app.location_address.select': '#AB149E',
+  'app.productDettail.queryShopCart': '#FF4700',
+
+  'app.usercenter.handle_user_reducer': '#4A148C',
+  'app.home_select.tab_ORDER': '#1A237E',
+  'app.home_select.tab_SELECT': '#01579B',
+  'app.home_select.go_to_product_detail': '#009688',
+  'app.productDettail.queryShopCart': '#33691E',
+  'app.home_select.recharge': '#827717',
+  'app.balance.switch': '#BF360C',
+  'app.balance.from': '#607D8B',
+}
+
+
+const getPageName = (page_) => {
+	return `[${pageNameDict[page_]}]`;
+}
+
+const getLog = (idx_) => {
+	if (idx_ < 0) return null;
+	if (searchResultListSifted.length > idx_) {
+		return searchResultListSifted[idx_];
+	}
+	return null;
+}
+
+const getDuring = (idx_, nextidx_) => {
+	const curLog = getLog(idx_);
+	const nextLog = getLog(nextidx_);
+	let diff = 0;
+	if (!curLog || !nextLog) return 0;
+	diff = moment(nextLog.client_time) - moment(curLog.client_time);
+	return diff;
+}
+
+const getColor = (key) => {
+	return keyCorlorConf[key] || '#f1f1f1';
+}
+
+const timeDiffFormat = (diff) => {
+	diff = diff / 1000;
+	return `${diff}s`;
+}
+
+// app.request.time
+Vue.component('json-formater', {
+  props: ['id_', 'json_'],
+  mounted: function() {
+    // try {
+      // if (document.getElementById(this.id_)) document.getElementById(this.id_).innerHTML = syntaxHighlight(JSON.stringify(this.json_, undefined, 4));
+      let jsonStr = this.json_
+      if (typeof jsonStr !== 'string') {
+        jsonStr = JSON.stringify(this.json_, undefined, 4)
+      } else {
+        jsonStr = JSON.stringify( JSON.parse(this.json_), undefined, 4)
+      }
+      if (document.getElementById(this.id_)) document.getElementById(this.id_).innerHTML = syntaxHighlight(jsonStr);
+    // console.warn('this.id_')
+    // console.warn(this.id_)
+    // console.warn('this.json_')
+    // console.warn(typeof this.json_)
+    // console.warn(this.json_)
+    // console.warn('syntaxHighlight(JSON.stringify(this.json_, undefined, 4))')
+    // console.warn(syntaxHighlight(JSON.stringify(this.json_, undefined, 4)))
+  },
+  template: document.getElementById('json-formater').innerHTML,
+})
+
+Vue.component('time-diff', {
+  props: ['s_', 'e_', 'update_'],
+  data: () => {
+  	return {
+  		diff: 0,
+  	}
+  },
+  mounted: function () {
+  	this.timeDiff();
+  },
+  watch: {
+  	'update_': function() {
+  		this.timeDiff();
+  	},
+  },
+  methods: {
+  	getDuring,
+  	timeDiff: function() {
+  		this.diff = getDuring(this.s_, this.e_)
+  		return this.diff
+  	},
+  	timeDiffFormat,
+  },
+  template: document.getElementById('time-diff').innerHTML,
+})
+
+Vue.component('entry-color', {
+  props: ['key_'],
+  methods: {
+  	getColor,
+  },
+  components: {
+  },
+  data: function() {
+  	return {
+  		colors: defaultProps,
+  	};
+  },
+  template: '<div :style="\'display:inline-block;background:\'+ getColor(this.key_) +\'; left:-10px; top: 0px; width:10px ;height:10px;border-radius:50%;\'"></div> ',
+})
+
+Vue.component('app-page-name', {
+  props: ['page_'],
+  methods: {
+  	getPageName,
+  },
+  template: '<b>{{getPageName(page_)}} <font color="#999"><br />{{page_}} </font> </b> ',
+})
+
+// app.request.time
+Vue.component('entry-keys', {
+  props: ['entrykeys_map_'],
+  methods: {
+  	getLog,
+    getDuring,
+    getList: function() {
+      const keys = [];
+      
+    },
+    getKeys: function() {
+      const keys = [];
+      Object.keys(this.entrykeys_map_).forEach((v) => {
+        keys.push(v);
+      });
+      keys.sort((s, t)=> {
+        var a = s.toLowerCase();
+        var b = t.toLowerCase();
+        if (a < b) return -1;
+        if (a > b) return 1;
+        return 0;
+      });
+      this.keys = keys;
+    },
+    setFilter: function(keys) {
+      const entrykeysMap = getFilter();
+      if (keys === 'all') {
+        for (let k in entrykeysMap) {
+          entrykeysMap[k].checked = true;
+        }
+      } else if (keys === 'none') {
+        for (let k in entrykeysMap) {
+          entrykeysMap[k].checked = false;
+        }
+      } else {
+        for (let k in entrykeysMap) {
+          entrykeysMap[k].checked = false;
+          if (keys.indexOf(k) > -1) entrykeysMap[k].checked = true;
+        }
+      }
+      app.entrykeysMap = entrykeysMap;
+      store.set('entrykeysMap', entrykeysMap);
+
+      setTimeout(() => {
+        app.siftData();
+      }, 0)
+    },
+  },
+  mounted: function() {
+    if (this.keys.length !== 0) return ;
+    this.getKeys();
+  },
+  data: function() {
+    return {
+      keys: [],
+    }
+  },
+  watch: {
+    'entrykeys_map_': function(newv, oldv) {
+      setTimeout(() => {
+        this.getKeys();
+      });
+    },
+  },
+  template: document.getElementById('entry-keys').innerHTML,
+})
+
+// app.request.time
+Vue.component('app-request-time', {
+  props: ['v_', 'k_'],
+  methods: {
+    getLog,
+    getDuring,
+    query: function() {
+      var self = this;
+      self.message = '加载中';
+      jQuery.ajax({
+        url:'/comm_search/message/'+this.v_.entry_detail.requestId + '/message_json',
+        success:function(data){
+          try {
+            // document.getElementById('json_app_request_time__backend_'+self.k_).innerHTML = syntaxHighlight(data.data[0]._source.message);
+            jQuery('#json_app_request_time__backend_'+self.k_).html(data);
+          } catch (e) {
+            self.message = '没找到';
+          }
+        },
+        error:function(xhr,textStatus){
+          self.message = '发生错误';
+          console.log('错误')
+          console.log(xhr)
+          console.log(textStatus)
+        },
+      });
+    },
+  },
+  data: function() {
+    return {
+      message: '',
+    };
+  },
+  mounted: function() {
+    console.log('typeof this.v_.entry_detail:' + (typeof this.v_.entry_detail))
+    console.log(this.v_.entry_detail)
+    var jsonStr = this.v_.entry_detail
+    if (typeof jsonStr !== 'string') {
+      jsonStr = JSON.stringify(this.v_.entry_detail, undefined, 4)
+    } else {
+      this.v_.entry_detail = JSON.parse(this.v_.entry_detail)
+      jsonStr = JSON.stringify( this.v_.entry_detail, undefined, 4)
+      console.log(this.v_.entry_detail)
+    }
+    // console.log(jsonStr)
+
+    document.getElementById('json_app_request_time_'+this.k_).innerHTML = syntaxHighlight(jsonStr);
+  },
+  
+  template: document.getElementById('app-request-time').innerHTML,
+})
+
+
+Vue.component('app-system-page', {
+  props: ['v_', 'k_', 'collapse_list_'],
+  methods: {
+  	getLog,
+  	getDuring,
+    syntaxHighlight: function() {
+      document.getElementById('json_app_system_page_'+this.k_).innerHTML = syntaxHighlight(JSON.stringify(this.v_.entry_detail, undefined, 4));
+    },
+    collapseListByIdx: function() {
+      const nowCollpaseState = this.collapseText;
+      if (this.collapseText === '展开') {
+        this.collapseText = '收缩';
+      } else {
+        this.collapseText = '展开';
+      }
+      // console.log('collapseListByIdx:'+ this.k_ + this.collapseText )
+      bus.$emit('collapse', this.k_, nowCollpaseState);
+    },
+  },
+  mounted: function() {
+    this.syntaxHighlight();
+  },
+  data: function() {
+    return {
+      collapseText: '展开',
+    }
+  },
+  template: document.getElementById('app-system-page').innerHTML,
+})
+
+Vue.component('app-takeaway-cart_click', {
+  props: ['v_', 'k_'],
+  methods: {
+  	getLog,
+  	getDuring,
+  },
+  template: '<div>\
+  	<h3>app.takeaway.cart_click</h3>\
+  	<br /><u>view/Takeaway/component/PaymentBar</u>\
+  	{{v_}}\
+  </div>',
+})
+
+Vue.component('translator-item-null', {
+  props: ['v_', 'k_'],
+  methods: {
+  	getLog,
+  	getDuring,
+  	getColor,
+  },
+  template: document.getElementById('translator-item-null').innerHTML,
+})
+
+Vue.component('translator-item', {
+  props: ['v_', 'k_', 'collapse_list_'],
+  methods: {
+    collapse: function(collapse, idx) {
+      console.log('collapse')
+      // console.log(collapse)
+      // console.log(idx)
+    },
+  },
+  template: document.getElementById('translator-item').innerHTML,
+})
+
+
+Vue.component('translator-list', {
+  template: document.getElementById('translator-list').innerHTML,
+  props: ['ls_', 'collapse_list_'],
+  mounted: function() {
+    console.log('mounted');
+    bus.$on('collapse', this.collapse);
+  },
+  destroyed: function() {
+    console.log('destroyed');
+    bus.$off('collapse', this.collapse);
+  },
+  methods: {
+    collapse: function(idx, onoff) {
+      // console.log('lis collapse:' + idx + onoff);
+      const newIdx = JSON.parse(JSON.stringify(this.showIdxs));
+      // console.log('JSON.stringify(newIdx)');
+      // console.log(JSON.stringify(newIdx));
+      if (collapseMap[idx]) {
+        // console.log('JSON.stringify(collapseMap[idx])')
+        // console.log(JSON.stringify(collapseMap[idx]))
+        for(let j in collapseMap[idx]){
+          const showid = collapseMap[idx][j];
+          if (onoff === '展开') {
+            newIdx[showid] = 1;
+          } else {
+            newIdx[showid] = 0;
+          }
+        }
+      }
+      this.showIdxs = newIdx;
+    },
+    checkCollapseSelf: function(k, v) {
+      // console.log('entrykeysMap:'+v.entry_key)
+      // console.log(entrykeysMap[v.entry_key])
+      if (!this.collapse_list_ && entrykeysMap[v.entry_key].checked) return true;
+      if (this.collapse_list_ && v.entry_key==='app.system.page') return true;
+      if (this.showIdxs[k] && entrykeysMap[v.entry_key].checked) return true;
+      return false;
+    },
+  },
+  data: function(){
+  	return {
+      showIdxs: {},
+      dataTemplate: {},
+  	}
+  },
+  watch: {
+    ls_: function() {
+      if (this.ls_ && this.ls_.length > 0) this.dataTemplate = this.ls_[0];
+    },
+  },
+})
+
+// 折叠分析结果
+var collapseMap = {};
+// 筛选状态标记
+var entrykeysMap = {};
+
+// 筛选结果
+var siftSearchResult = function(searchResult, keyMap = {}) {
+  var serchResultCopyed = JSON.parse(JSON.stringify(searchResult));
+
+  console.log('serchResultCopyed')
+  console.log(serchResultCopyed)
+  // alert('serchResultCopyed' + JSON.stringify(serchResultCopyed))
+
+  // 开始是过滤掉, 现在改成前端设置显示隐藏了
+  // serchResultCopyed = serchResultCopyed.filter(function(v , i, arr){
+  //   return v.entry_key && keyMap[v.entry_key] && keyMap[v.entry_key].checked;
+  // });
+
+  // 折叠分析
+  let lastMarkedPageIdx = -1;
+
+  serchResultCopyed.forEach(function(v , i, arr){
+    if (v.entry_key === 'app.system.page') {
+      lastMarkedPageIdx = i;
+      collapseMap[lastMarkedPageIdx] = collapseMap[lastMarkedPageIdx] || [];
+      // collapseMap[lastMarkedPageIdx].push(lastMarkedP   ageIdx);
+    } else {
+      if (lastMarkedPageIdx > -1) collapseMap[lastMarkedPageIdx].push(i);
+    }
+  });
+  // 调试折叠信息
+  console.log('collapseMap');
+  console.log(collapseMap);
+  console.log('collapseMap:' + JSON.stringify(collapseMap) );
+
+  // serchResultCopyed.forEach(function(v , i, arr){
+  //   console.dir(v)
+  // });
+  // alert('serchResultCopyed:' + JSON.stringify(serchResultCopyed))
+
+  return serchResultCopyed;
+};
+
+// 获得筛选器
+var getFilter = function() {
+  entrykeysMap = {};
+  searchResultList.forEach(function(v, k) {
+    // console.log('k')
+    // console.dir(v)
+    entrykeysMap[v.entry_key] = {checked: 0};
+  });
+  const entrykeysMapStored = store.get('entrykeysMap')
+  if (entrykeysMapStored) {
+    for (let k in entrykeysMapStored) {
+      if (entrykeysMap[k]) entrykeysMap[k].checked = entrykeysMapStored[k].checked;
+    }
+  }
+  return entrykeysMap;
+};
+
+var defaultProps = {
+  hex: '#194d33'
+};
+
+var bus = new Vue();
+
+// 最上层容器
+var app = new Vue({
+  el: '#app',
+  components: {
+    // 'color-picker': VueColor.Swatches
+  },
+  methods: {
+    siftData: function() {
+      // 筛选数据
+      searchResultListSifted = siftSearchResult(searchResultList, this.entrykeysMap);
+      this.searchResultList = searchResultListSifted;
+
+      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`')
+      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`')
+      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`')
+      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`')
+      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`')
+      // console.log('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`')
+      // console.log('this.searchResultList')
+      // console.log(this.searchResultList)
+      // console.log('this.entrykeysMap')
+      // console.log(this.entrykeysMap)
+
+      // alert('this.entrykeysMap' + JSON.stringify(this.entrykeysMap) + 'this.searchResultList:' + JSON.stringify(this.searchResultList))
+    },
+
+  },
+  mounted: function () {
+    const self = this;
+    const entrykeysMap = getFilter();
+    self.entrykeysMap = entrykeysMap;
+    store.set('entrykeysMap', entrykeysMap);
+    this.siftData();
+  },
+  data: function(){
+    return {
+      searchResultList: [],
+      entrykeysMap: [],
+      showFilter: true,
+      collapseList: false,
+      colors: defaultProps,
+    }
+  },
+  watch: {
+    'collapseList': function(oldv, newv) {
+    },
+  },
+});
+
+// filter变化时, 重新搜索数据
+app.$watch('entrykeysMap', {
+  deep: true,
+  handler: function(oldv, newv) {
+    store.set('entrykeysMap', getRawData(newv));
+    console.log('............... set entrykeysMap')
+    this.siftData();
+  },
+});
+
+var getRawData = function(data) {
+  const dataCopyed = JSON.parse(JSON.stringify(data));
+  for (let k in dataCopyed) {
+    if (!dataCopyed.hasOwnProperty(k)) {
+      delete dataCopyed[k];
+    }
+  }
+  return dataCopyed;
+}
+
+// 输入窗自动适应大小
+var autoSizeTextArea = function(show) {
+  console.log(show)
+  let height = 40;
+  let contentTop = 0;
+  if (show) {
+    contentTop = 0 + height - 30;
+    jQuery('#textarea_fake').hide();
+    jQuery('#textarea_auto').css({visibility:'visible'}).show().focus();
+
+    height = document.getElementById('textarea_auto').scrollHeight;
+    document.getElementById('textarea_auto').style.height = height + 'px';
+    // document.getElementById('app').style.paddingTop = contentTop + 'px';
+
+  } else {
+    jQuery('#textarea_auto').css({visibility:'hidden'}).hide();
+    jQuery('#textarea_fake').show();
+  }
+
+
+};
+autoSizeTextArea();
+
+
+</script>

@@ -1,0 +1,187 @@
+html
+  head
+    title ing
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <link rel="stylesheet" href="./assets/css/duole.css">
+
+    style(type='text/css').
+      body {
+        padding: 10px auto;
+        padding-bottom: 200px;
+      }
+      td.size {
+        border-right: 1px solid #ccc;
+        padding: 1px 4px;
+        text-align: center;
+      }
+      td.title {
+        background: #f1f1f1;
+      }
+
+  body
+    div#app( v-cloak )
+      p(style="color:#999;font-size:10px;") 仅显示以下尺码： {{sizesOrdered.join(', ')}}
+      div(v-for="(idx,v) in ls")
+
+        div(style="position:relative;border-bottom:1px solid #ccc;")
+          table
+            tr
+              td(valign="top" :style="'position:relative;background:'+(v.type==='newSku'?'#000':'')+';color:'+(v.type==='newSku'?'#fff':'#999')+';font-size:12px;'")
+                a(:href="'https://atonce.nike.net/#/detail/id/'+v.sku" target="_blank" style="color:#F5361C")
+                  img(:src="'http://192.168.1.121:3000/?sku='+v.sku+''" height="100" width="100")
+                br
+                font(style="font-size:12px;") {{new Date(v.createdAt).format("yyyy-MM-dd hh:mm:ss")}}
+                div(v-if="info[v.sku].closeout" style="color:#fff;background:red;position:absolute;top:1;left:1;font-size:10px;") {{info[v.sku].closeout ? '[过季]':''}}
+
+
+              td(style="padding-left: 20px;")
+
+                a(:href="'/official-change?sku='+v.sku" target="_blank" style="color:#F5361C") {{v.sku}}
+
+                a(:href="'https://s.taobao.com/search?q='+v.sku+'&sort=sale-desc'" target="_blank" style="color:#F5361C;padding-left:5px;") 淘
+
+                b 
+                span(:id="'title_'+v.id" v-if="info[v.sku]") {{info[v.sku].retailPrice / 100}}   {{info[v.sku].name}}   
+                span(v-if="info[v.sku]")
+                  font(style="color:#ff0000;padding-left:10px;") {{info[v.sku].closeout ? '[过季]':''}}  {{info[v.sku].season}}
+                  font(style="color:blue;padding-left:10px;") {{info[v.sku].category}}
+                  font(style="color:red;padding-left:10px;") {{info[v.sku].type}}
+                  font(style="color:green;padding-left:10px;") {{info[v.sku].gender}} 
+                span(:id="'stock_'+v.id+'_'+idx") 同步库存中...
+                div(style="padding: 10px 0 0 0px;")
+                    div(style="padding: 0 0 0 0px;")
+                      //- p {{v.stockChange | json}}
+                      table
+                        tr
+                          td.size.title(v-for="size in sizesOrdered" v-if="v.stockCurrent[size] || v.stockChange[size]")
+                            b {{size}}
+                        tr
+                          td.size(v-for="size in sizesOrdered" v-if="v.stockCurrent[size] || v.stockChange[size]") {{v.stockCurrent[size]}}
+                            span(v-if="v.stockChange[size]" style="font-size:14px;color:#ff0000;padding-left:3px;")  {{v.stockChange[size]}}
+
+                    //- span {{v.type}}
+
+
+      div(style="padding:20px;")
+        div
+          a(v-if="query.page > 1" :href="'/official-change?page='+(query.page - 1)+'&length='+query.length+'&sku='+(query.sku || '')" style="padding-right:30px;") 上一页
+          a(:href="'/official-change?page='+(query.page + 1)+'&length='+query.length+'&sku='+(query.sku || '')" style="padding-right:30px;") 下一页
+
+        div(style="margin: 10px 0 20px 0;")
+          span(v-for="page in pages" )
+            a(v-if="page!=query.page" :href="'/official-change?page='+page+'&length='+query.length+'&sku='+(query.sku || '')" style="padding-right:10px;") {{page}}
+            span(v-else style="padding-left:5px;padding-right:15px;font-size:18px;") [{{page}}]
+
+
+<script type="text/javascript" src="./assets/js/es6_promise.js"></script>
+<script type="text/javascript" src="./assets/js/moment.js"></script>
+<script type="text/javascript" src="./assets/js/vue_v1.min.js"></script>
+<script type="text/javascript" src="./assets/js/vuex.js"></script>
+<script type="text/javascript" src="./assets/js/jwerty.js"></script>
+
+<script type="text/javascript" src="./assets/js/zepto.js"></script>
+<script type="text/javascript">
+</script>
+
+script.
+  Date.prototype.format = function(fmt) { 
+       var o = { 
+          "M+" : this.getMonth()+1,                 //月份 
+          "d+" : this.getDate(),                    //日 
+          "h+" : this.getHours(),                   //小时 
+          "m+" : this.getMinutes(),                 //分 
+          "s+" : this.getSeconds(),                 //秒 
+          "q+" : Math.floor((this.getMonth()+3)/3), //季度 
+          "S"  : this.getMilliseconds()             //毫秒 
+      }; 
+      if(/(y+)/.test(fmt)) {
+              fmt=fmt.replace(RegExp.$1, (this.getFullYear()+"").substr(4 - RegExp.$1.length)); 
+      }
+       for(var k in o) {
+          if(new RegExp("("+ k +")").test(fmt)){
+               fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));
+           }
+       }
+      return fmt; 
+  }
+
+  var bus = new Vue();
+
+  // 最上层容器
+  var app = new Vue({
+    el: '#app',
+    components: {
+    },
+    data: function(){
+      var ls = !{ls}
+      var query = !{query} || {}
+      query.page = parseInt(query.page) || 1
+      query.length = parseInt(query.length) || 10
+      ls.forEach((it) => {
+        //- it.stockCurrent = JSON.parse(JSON.stringify(it.stockChange))
+        it.stockCurrent = {}
+      })
+
+      let startPage = query.page - 10
+      let endPage = query.page + 10
+      if (startPage < 1) startPage = 1
+      const pages = []
+      for(let i=startPage;i<=endPage;i++){
+        pages.push(i)
+      }
+
+      return {
+        ls: ls,
+        info: {},
+        //- page: query.page,
+        pages: pages,
+        sizesOrdered: 'MISC 2C 3C  4C  5C  6C  7C  8C  9C  10C 10.5C 11C 11.5C 12C 12.5C 13.5C 13C 1Y 1.5Y 2Y 2.5Y 3Y 3.5Y 4Y  4.5Y  5Y  5.5Y  6Y  6.5Y  7Y 5  5.5 6 6.5 7 7.5 8 8.5 9 9.5 10  10.5  11  11.5  12 12.5 13 XS  S M L XL XXL XXXL 2XL 3XL 4-5.5 6-7.5 8-9.5 10- 12- 14-16'.replace(/  /img, ' ').split(' '),
+        data: {},
+        query: query,
+      }
+    },
+    watch: {
+    },
+    computed: {
+    },
+    methods: {
+    },
+    destroyed: function() {
+    },
+    created: function () {
+      const cache = {}
+      const sended = {}
+
+      setTimeout(() => {
+        this.ls.forEach((v, idx) => {
+          const sku = v.sku
+          console.log(v.sku)
+          console.log(idx)
+          if (sended[sku]) {
+              console.log('01 #stock_'+v.id+'_'+idx)
+              $('#stock_'+v.id+'_'+idx).html('')
+              const res = cache[sku]
+              if (res && res.sizes) {
+                this.ls[idx].stockCurrent = res.sizes
+                this.ls.$set(idx, this.ls[idx])
+                Vue.set(this.info, v.sku, res.info);
+              }
+          } else {
+            sended[sku] = 1
+            $.get('/official-skuinfo?sku='+v.sku, (res) => {
+              $('#stock_'+v.id+'_'+idx).html('')
+              console.log('02 #stock_'+v.id+'_'+idx)
+              cache[sku] = res
+              console.log(res)
+              if (res && res.sizes) {
+                this.ls[idx].stockCurrent = res.sizes
+                this.ls.$set(idx, this.ls[idx])
+                Vue.set(this.info, v.sku, res.info);
+              }
+            })
+          }
+        })
+      })
+    },
+  });
+

@@ -1,0 +1,52 @@
+html
+  head(lang='zh-cn')
+    meta(charset='utf-8')
+    title Blebee-app Tracker Detail
+    style(media='screen', type='text/css')
+      include ../assets/css/main.css
+    script(type='text/javascript')
+      include ../assets/js/const.js
+  body
+    div(style='padding: 10px 30px;border:1px solid #ccc;')
+      div
+        pre#extra
+    div(style='padding: 10px 30px;border:1px solid #ccc;')
+      h1 request
+      div
+        pre#request
+    div(style='padding: 10px 30px;border:1px solid #ccc;')
+      h1 response
+      div
+        pre#response
+
+
+    script.
+      // 最原始的列表数据
+      var message = '!{message}';
+      console.log('message');
+      console.log(message);
+      var extra = message.substring(0, message.indexOf('request=') );
+      var request = message.substring( message.indexOf('request=')+'request='.length , message.indexOf(', response=') );
+      var response = message.substring( message.indexOf(', response=')+', response='.length );
+      if (response.substring(response.length-1) == ']') {
+        response = response.substring(0, response.length - 1);
+      }
+
+      try {
+        console.log('request');
+        console.log(JSON.parse(request));
+        console.log('');
+      }catch (e) {}
+      try {
+        console.log('response');
+        console.log(response);
+        console.log(JSON.parse(response));
+      }catch (e) {}
+
+      document.getElementById('extra').innerHTML = syntaxHighlight(extra);
+      try {
+        document.getElementById('request').innerHTML = syntaxHighlight(JSON.stringify(JSON.parse(request), undefined, 4));
+      } catch (e) {}
+      try {
+        document.getElementById('response').innerHTML = syntaxHighlight(JSON.stringify(JSON.parse(response), undefined, 4));
+      } catch (e) {}

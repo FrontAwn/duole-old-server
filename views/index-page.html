@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>99999</title>
+  <link rel="stylesheet" href="./assets/css/duole.css">
+  <style type="text/css">
+  </style>
+</head>
+<body>
+<div id="app" class="scrollableContainer">
+  <header style="position: fixed;opacity: 1; z-index: 99999;top:0; left: 0;">
+    <input v-model="searchKey"> | {{ currentPageNum }} |
+    {{dataIdsVisible}}
+    {{overSkuSizeInfo.sku}}
+    {{overSkuSizeInfo.size}}
+    {{showPic}}
+    {{currentScroller}}
+    {{ JSON.stringify(dataIdsHide) }}
+  </header>
+
+  <div id="scroll_info" style="position:fixed; background: #f00;min-width: 50px; height: 20px;position: absolute;top: 0px;right: 0px;">
+  </div>
+
+
+  <!-- table header S -->
+  <div style="margin-top: 35px;position: fixed; top: 0px; height: 25px; background: #f1f1f1;width: 100%;display: flex;flex-direction: row;">
+
+    <div id="headerContainer_fixed" :style="'margin-top: 0px;background: #F9F9F9;width: '+skuInfoWidth+'px;height:30px;position: fixed;left:0;overflow: hidden;border-right: 1px solid #bbb;z-index: 999;'">
+      SKU
+    </div>
+
+    <div :style="'display:flex;flex:1;margin-top: 0px;top: 0px; background: #F9F9F9; padding-left:  '+skuInfoWidth+'px ;overflow: hidden;position: relative;'">
+      <div id="headerContainer" :style="'' ">
+        <div style="">
+          <div :key="id" class="sku" :style="'background: #DDD;height:25px;left:-'+sizeScrollLeft+'px;'">
+            <div class="sku-row-scrollable">
+            <div v-for="(idx, size) in sizes" :class="{'size': true, 'col-selected': (overSkuSizeInfo.size === size)}" :style="'width:'+sizeWidth+'px'">
+              {{size}}
+            </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <!-- table header E -->
+
+  <!-- table body S -->
+  <div style="margin-top: 55px;position: fixed; top: 0px; bottom: 20px; background: #f1f1f1;width: 100%;display: flex;flex-direction: row;">
+
+    
+    <div id="dataContainer_sku_parent" :style="'width:'+skuInfoWidth+'px;;margin-top: 0px;top: 0px; bottom: 20px; background: #fff;overflow: scroll;position: relative;'">
+
+      <div id="dataContainer_sku_content" :style="'background: #fff;min-height: 2000px; height:' + (headHeight+bodyHeight+tailHeight) + 'px' ">
+        <div :style="'height:'+headHeight+'px'"></div>
+        <div :style="'height:'+bodyHeight+'px;overflow:hidden;'">
+        <div v-for="sku in dataIdsVisible"
+          :key="sku"
+          :class="{
+            'sku':true,
+            'row-selected':(overSkuSizeInfo.sku === sku),
+            'hide': (dataIdsHide[sku] === 1),
+          }"
+          :style="'height:'+cellHeight+'px;'"
+          @mouseover="overSku(sku)"
+        >
+          <div class="sku-column-fixed">
+            <div style="display:flex;flex-direction:row;">
+                <div class="bordercell" style="width:100px;">
+                  <a :href="'https://s.taobao.com/search?q='+sku" target="_blank">{{sku}}</a>
+                  <img v-if="showPic" height="100" :src="'http://192.168.1.87:3000/?sku='+sku" />
+                </div>
+
+                <div class="bordercell" :style="'width:70px;--line-height:'+(showPic?100:24)+'px;text-align:center;'">
+                  {{getPrice(sku)}}
+                </div>
+
+                <div class="bordercell" style="width:100px;">
+                  price2
+                </div>
+
+                <div class="bordercell" style="width:100px;">
+                  price3
+                </div>
+
+                <div class="bordercell" style="width:100px;">
+                  price4
+                </div>
+
+            </div>
+          </div>
+        </div>
+        </div>
+        <div :style="'height:'+tailHeight+'px'"></div>
+      </div>
+
+    </div>
+
+
+    <div id="dataContainer_size_parent" style="display:flex;flex:1;margin-top: 0px;top: 0px; bottom: 20px; background: #fff;overflow: scroll;position: relative;">
+      <div id="dataContainer_size_content" :style="'background: #fff;min-height: 2000px; height:' + (headHeight+bodyHeight+tailHeight) + 'px' ">
+        <div :style="'height:'+headHeight+'px'"></div>
+        <div style="">
+          <div v-for="sku in dataIdsVisible" :key="sku" style="">
+            <!-- <div class="sku-column-fixed">{{id}}</div> -->
+            <div class="sku-row-scrollable">
+              <div
+                v-for="(idx, size) in sizes"
+                :class="{
+                  'size':true,
+                  'sku-row-scrollable-item': true,
+                  'row-selected': (overSkuSizeInfo.sku === sku),
+                }"
+                @mouseover="overSkuSize(sku, size)"
+                :style="'width:'+sizeWidth+'px;height:'+cellHeight+'px'"
+              >
+                <sku-size-cell :sku_="sku" :size_="size" :amount_="getAmount(sku, size)" :cellHeight_="cellHeight"></sku-size-cell>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div :style="'height:'+tailHeight+'px'"></div>
+
+      </div>
+    </div>    
+  </div>
+  <!-- table body E -->
+
+  <footer style="position: fixed;opacity: 0.1; z-index: 99999;bottom:0; left: 0;">
+    footer
+  </footer>
+</div>
+<script type="text/javascript" src="./assets/js/es6_promise.js"></script>
+<script type="text/javascript" src="./assets/js/vue_v1.min.js"></script>
+<script type="text/javascript" src="./assets/js/vuex.js"></script>
+<script type="text/javascript" src="./assets/js/jwerty.js"></script>
+
+<script type="text/javascript">
+  Vue.use(Vuex)
+
+  const store = new Vuex.Store({
+    state: {
+      overSkuSizeInfo: {
+
+      },
+      pageId: 1,
+      showPic: true,
+      currentScroller: 'dataContainer_sku_content',
+    },
+    mutations: {
+      overSkuSize (state, payload) {
+        state.overSkuSizeInfo = {
+          sku: payload.sku,
+          size: payload.size,
+        }
+      }
+    }
+  });
+  store.commit('overSkuSize', {sku: 'skuaaa', size: 'sizebbb'})
+  console.log(store.state.overSkuSizeInfo)
+
+</script>
+<script type="text/javascript" src="./assets/js/zepto.js"></script>
+<script type="text/javascript">
+
+  var localstorage_sku_pre_check = localStorage.getItem('sku_pre_check')
+  if (localstorage_sku_pre_check) localstorage_sku_pre_check = JSON.parse(localstorage_sku_pre_check)
+
+  var localstorage_stock_self = localStorage.getItem('stock_self')
+  if (localstorage_stock_self) localstorage_stock_self = JSON.parse(localstorage_stock_self)
+    
+  // console.log(localstorage_sku_pre_check)
+  console.log(localstorage_stock_self)
+
+  // $$dataMap = localstorage_sku_pre_check || {}
+  // $$dataSkuList = Object.keys($$dataMap);
+  // $$searchResult = $$dataSkuList;
+  // $$allLength = $$dataSkuList.length;
+
+
+  $$reloadSkus = (skuMap) => {
+    $$dataMap = skuMap || {}
+    $$dataSkuList = Object.keys($$dataMap);
+    $$searchResult = $$dataSkuList;
+    $$allLength = $$dataSkuList.length;
+
+  }
+  
+  $$reloadSkus(localstorage_sku_pre_check)
+
+  // console.log($$dataSkuList)
+
+  $$scrolledDistance = {
+    top: 0,
+    left: 0,
+  }
+  $$nextUpdateTick = 0;
+
+  $$loadSkuByPage = async (page, pageSize, visiblePages) => {
+    const res = await fetchResouce({
+        type: 'GET',
+        url: `/page?key=sku_pre_check_list&size=${pageSize * 3}&page=${visiblePages[0]}`,
+        dataType: 'json',
+        timeout: 300,
+      })
+    let { total, size, ls } = res
+    if (res.page !== app.currentPageNum) return;
+    const skusVisible = ls
+    console.log(skusVisible)
+    app.dataIdsVisible = Object.keys(skusVisible)
+  }
+
+
+  var scrollTimer = null
+  var lastPos = null
+  var winScroll = function(fromDom) {
+    fromDom = 'dataContainer_sku_content'  // fake
+
+    var _from = 'dataContainer_sku_content'
+    var _to = 'dataContainer_size_parent'
+    if (fromDom == 'dataContainer_size_content') {
+      _to = 'dataContainer_sku_parent'
+      _from = fromDom
+    }
+    return function() {
+      if (fromDom !== store.state.currentScroller){
+        return;
+      }
+
+      if(scrollTimer !== null) {
+          clearTimeout(scrollTimer);        
+      }
+      scrollTimer = setTimeout(function() {
+        var pos = $('#'+_from).position()
+     //    console.log('curpos:' + JSON.stringify(pos))
+        // console.log('lastPos:' + JSON.stringify(lastPos))
+        $('#scroll_info').text(JSON.stringify(pos))
+
+        // if (pos.left === 0) {
+        //   setTimeout(function() {
+        //     pos.left = $('#'+_from).parent()[0].scrollLeft = 1
+        //   }, 500)
+        // }
+
+        $$scrolledDistance.top = -pos.top
+        $$scrolledDistance.left = -pos.left
+
+
+        if (app) {
+          app.sizeScrollLeft = $$scrolledDistance.left
+        }
+
+        if (lastPos) {
+          // console.log(Math.abs($$scrolledDistance.top - lastPos.top))
+          if ((Math.abs($$scrolledDistance.top - lastPos.top) < 2)) {
+            return
+          }
+        }
+        // console.log('lastPos set11111:' + JSON.stringify(lastPos))
+
+        lastPos = {top: $$scrolledDistance.top}
+        // console.log('lastPos set:' + JSON.stringify(lastPos))
+
+        $$renderDatas();
+
+        $('#'+_to).scrollTop(
+          $('#'+_from).parent()[0].scrollTop
+        )
+      }, 0);
+    }
+  }
+
+  var scrollFromSkuToSize = winScroll('dataContainer_sku_content')
+  var scrollFromSizeToSku = winScroll('dataContainer_size_content')
+
+
+
+  $$datas = [];
+  for(var i = 0; i<=$$allLength; i++) {
+    $$datas.push({id:i, sku:'sku:'+i})
+  }
+  // console.dir($$datas)
+
+
+  $$StockInfoMap = {}
+  $$fetchStockData = function(ids) {
+    const noIds = []
+    for(var i in ids){
+      const id = ids[i]
+      if (!$$StockInfoMap[id]) {
+        noIds.push(id)
+        $$StockInfoMap[id] = 1
+      }
+    }
+    console.log('noIds:' + JSON.stringify(noIds))
+    return noIds
+  }
+
+  // 重新计算可视区域内的id
+  $$renderDatas = async function() {
+    console.log('-----------------------------$$renderDatas')
+
+    var res = '';
+    var resArr = [];
+
+    if (!app || !app.dataIdsVisible) return;
+    var lastPageNum = app.currentPageNum
+
+    // var lineHeight = app.cellHeight;
+    var itemsLength = 1000;
+    var lineHeight = app.cellHeight;
+    var fullHeight = lineHeight * itemsLength;
+
+    const containerHeight = $('#dataContainer_sku_content').parent().offset().height
+    const pageSize = Math.ceil(containerHeight/lineHeight)
+    const onePageHeight = pageSize * lineHeight
+
+    var pos = $('#dataContainer_sku_content').position()
+
+
+    let currentPageNum = Math.floor(Math.abs(pos.top) / onePageHeight) + 1
+    // let currentPageNum = Math.floor(($$scrolledDistance.top) / onePageHeight) + 1
+    console.log('' + $$scrolledDistance.top + '/' + onePageHeight + '  currentPageNum::::' + currentPageNum)
+
+    if (currentPageNum <= 1) currentPageNum = 1
+    
+    var visibleHeadHeight = (currentPageNum - 2) * onePageHeight
+  // visibleHeadHeight = 0
+    if (visibleHeadHeight < 0) visibleHeadHeight = 0
+
+    var visiblePages = []
+    // if (currentPageNum <= 2) {
+    //   visiblePages = [1, 2, 3]
+    // } else {
+      visiblePages = [currentPageNum - 1, currentPageNum, currentPageNum + 1]
+    // }
+
+    app.currentPageNum = currentPageNum
+    if (lastPageNum != currentPageNum) {
+      // console.log('lastPageNum: '+ lastPageNum +' changePageNum:' + currentPageNum)
+
+      await $$loadSkuByPage(currentPageNum, pageSize, visiblePages)
+    }
+    console.log(visiblePages)
+
+    visibleBodyHeight = 3 * onePageHeight
+    visibleTailHeight = fullHeight - visibleHeadHeight - visibleBodyHeight
+  
+    if (visibleTailHeight < 0) {
+      visibleTailHeight = 0
+      visibleBodyHeight = fullHeight - visibleHeadHeight
+    }
+
+
+    // console.log('$$scrolledDistance.top: ' + $$scrolledDistance.top)
+    console.log('[currentPageNum: ' + app.currentPageNum +']  visibleHeadHeight: ' + visibleHeadHeight + ' visibleBodyHeight:' + visibleBodyHeight + ' visibleTailHeight:' + visibleTailHeight + ' = ' + (visibleHeadHeight + visibleBodyHeight + visibleTailHeight))
+    // console.log('currentPageNum: ' + currentPageNum + ' onePageHeight:' + onePageHeight)
+
+    app.headHeight = Math.ceil(visibleHeadHeight)
+    app.bodyHeight = Math.ceil(visibleBodyHeight)
+    app.tailHeight = Math.ceil(visibleTailHeight)
+
+
+
+    // // 计算出应该显示的i范围
+    // var iMin = $$scrolledDistance.top / lineHeight - 1 - 20  + 20
+    // iMin = Math.ceil(iMin)
+    // if (iMin < 0) iMin = 0
+    // var iMax = iMin + $('#dataContainer_sku_content').parent().offset().height / lineHeight + 40  - 40
+    // iMax = Math.ceil(iMax)
+    // if (iMax > $$allLength) iMax = $$allLength
+    
+    // var dataIdsVisible = []
+    // 从筛选范围内搜索
+
+    // for(var i = iMin; i<iMax; i++) {
+    //   if (i >= $$searchResult.length) {
+    //     break;
+    //   }
+    //   dataIdsVisible.push($$searchResult[i])
+    // }
+
+    // console.log(dataIdsVisible)
+    // // 获得没有获得过的信息
+    // $$fetchStockData(dataIdsVisible)
+
+    // app.dataIdsVisible = dataIdsVisible
+
+    $$nextUpdateTick = (new Date()).getTime()
+
+    // app.headHeight = Math.ceil((lineHeight*iMin))
+    // app.bodyHeight = Math.ceil(lineHeight * (iMax - iMin + 1))
+    // app.tailHeight = Math.ceil(($$allLength - iMax)*lineHeight)
+
+  }
+
+  // // 重新计算可视区域内的id
+  // $$renderDatas = function() {
+  //   var res = '';
+  //   var resArr = [];
+
+  //   if (!app || !app.dataIdsVisible) return;
+
+  //   // 计算出应该显示的i范围
+  //   var lineHeight = app.cellHeight;
+  //   var iMin = $$scrolledDistance.top / lineHeight - 1 - 20  + 20
+  //   iMin = Math.ceil(iMin)
+  //   if (iMin < 0) iMin = 0
+  //   var iMax = iMin + $('#dataContainer_sku_content').parent().offset().height / lineHeight + 40  - 40
+  //   iMax = Math.ceil(iMax)
+  //   if (iMax > $$allLength) iMax = $$allLength
+    
+  //   var dataIdsVisible = []
+  //   // 从筛选范围内搜索
+
+  //   for(var i = iMin; i<iMax; i++) {
+  //     if (i >= $$searchResult.length) {
+  //       break;
+  //     }
+  //     dataIdsVisible.push($$searchResult[i])
+  //   }
+
+  //   console.log(dataIdsVisible)
+  //   // 获得没有获得过的信息
+  //   $$fetchStockData(dataIdsVisible)
+
+  //   app.dataIdsVisible = dataIdsVisible
+
+  //   $$nextUpdateTick = (new Date()).getTime()
+
+  //   app.headHeight = Math.ceil((lineHeight*iMin))
+  //   app.bodyHeight = Math.ceil(lineHeight * (iMax - iMin + 1))
+  //   app.tailHeight = Math.ceil(($$allLength - iMax)*lineHeight)
+
+  // }
+
+
+  /*
+$('#dataContainer_size_parent')[0].scrollTop
+$('#dataContainer_sku_content').parent()[0].scrollTop
+
+$('#dataContainer_sku_content').on('scroll', winSc)
+$('#dataContainer_sku_content').parent().scroll(winScroll);
+  */
+</script>
+
+
+
+<div id="sku-size-cell" style="display: none;">
+  <div>
+    <div v-if="amount_ > 0">
+      <input v-if="amount_ > 0" type='text' v-model="needAmount" id='_editable' style='width:100%;box-sizing:border-box;background:transparent;font-size:13px;color:red;text-align:center;border: 0px;'>
+      <div style="height: 20px;"><font v-if="stockOnRoad > 0" class="stock_amount" color="green">{{stockOnRoad}}</font></div>
+      <div style="height: 20px;"><font v-if="stockInStock > 0" class="stock_amount" color="orange">{{stockInStock}}</font></div>
+      <div v-if="sum > 0" style="height: 20px;border-top: 1px solid #ccc;"><font class="stock_amount" color="#333">{{sum}}</font></div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+
+Vue.component('sku-size-cell', {
+  props: ['sku_', 'size_', 'cellHeight_', 'amount_'],
+  data: () => {
+    return {
+      diff: 0,
+      needAmount: 0,
+    }
+  },
+  created: function () {
+    this.needAmount = this.amount_
+  },
+  watch: {
+    'update_': function() {
+    },
+  },
+  methods: {
+    changeAmount: function() {
+    },
+  },
+  computed: {
+    stockOnRoad () {
+      if (
+        localstorage_stock_self.onroad
+        && localstorage_stock_self.onroad[this.sku_]
+        && localstorage_stock_self.onroad[this.sku_].sizes
+        && localstorage_stock_self.onroad[this.sku_].sizes[this.size_]
+      ) {
+        return parseInt(localstorage_stock_self.onroad[this.sku_].sizes[this.size_])
+      }
+      return 0
+    },
+    stockInStock () {
+      if (
+        localstorage_stock_self.instock
+        && localstorage_stock_self.instock[this.sku_]
+        && localstorage_stock_self.instock[this.sku_].sizes
+        && localstorage_stock_self.instock[this.sku_].sizes[this.size_]
+      ) {
+        return parseInt(localstorage_stock_self.instock[this.sku_].sizes[this.size_])
+      }
+      return 0
+    },
+    sum () {
+      if (!this.needAmount) this.needAmount = 0
+      return parseInt(this.stockOnRoad) + parseInt(this.stockInStock) + parseInt(this.needAmount)
+    },
+  },
+  template: document.getElementById('sku-size-cell').innerHTML,
+})
+
+</script>
+
+<script type="text/javascript">
+
+var bus = new Vue();
+
+var fetchResouce = (params) => {
+  return new Promise((res, rej) => {
+    params.success = (data) => {
+      res(data)
+    }
+    params.error = (data) => {
+      rej('ajax err:' + params.url)
+    }
+    $.ajax(params)
+  })
+}
+
+var initData = async () => {
+  localstorage_sku_pre_check = await fetchResouce({
+      type: 'GET',
+      url: '/epr/filtered',
+      dataType: 'json',
+      timeout: 300,
+    })
+
+  localstorage_stock_self = await fetchResouce({
+      type: 'GET',
+      url: '/mem?&type=json&key=stock_self',
+      dataType: 'json',
+      timeout: 300,
+  })
+
+  // 装填数据
+  $$reloadSkus(localstorage_sku_pre_check)
+  app.search('')
+
+}
+
+// 最上层容器
+var app = new Vue({
+  el: '#app',
+  components: {
+  },
+  data: function(){
+    return {
+      currentPageNum: 0,
+      dataIdsVisible: [],
+      searchKey: '',
+      cellHeight: 130,
+      sizeWidth: 30,
+      skuInfoWidth: 100,
+      sizes: [],
+      // sizes: ['A1','B','C','D','E','F','G','H','I','J','K','L','M','N','O', 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O', ],
+      sizeScrollLeft: 0,
+      headHeight: 0,
+      bodyHeight: 0,
+      tailHeight: 0,
+      dataIdsHide: {},
+    }
+  },
+  watch: {
+    'dataIdsVisible': function(oldv, newv) {
+      // console.log('dataIdsVisible changed' + JSON.stringify(newv))
+    },
+    'searchKey': function(oldv, newv) {
+      this.search()
+    },
+  },
+  computed: {
+    overSkuSizeInfo () {
+      return store.state.overSkuSizeInfo
+    },
+    currentScroller() {
+      return store.state.currentScroller
+    },
+    showPic () {
+      return store.state.showPic
+    },
+  },
+  methods: {
+    getPrice: function(sku) {
+      return (localstorage_sku_pre_check[sku].RETAILPRICE *0.395 *1.3).toFixed(2)
+    },
+    overSku: function(sku) {
+      store.state.currentScroller = 'dataContainer_sku_content'
+      store.commit('overSkuSize', {
+        sku,
+        size: null,
+      })
+    },
+    overSkuSize: function(sku, size) {
+      store.state.currentScroller = 'dataContainer_size_content'
+      store.commit('overSkuSize', {
+        sku,
+        size,
+      })
+    },
+    getAmount: function(sku, size) {
+      // console.log($$dataMap[sku])
+      if ($$dataMap[sku] && $$dataMap[sku].sizes && $$dataMap[sku].sizes[size]) {
+        return $$dataMap[sku].sizes[size]
+      }
+      return ''
+    },
+    randomChangeDataId: function() {
+      
+      scrollFromSkuToSize();
+
+      var self = this
+      // this.dataIdsVisible.push((new Date()).getTime())
+      // setTimeout(function(){
+      //  self.randomChangeDataId()
+      // }, Math.random() * 1000 * 3)
+    },
+    showPic: function() {
+
+    },
+    search: function() {
+      var dataIdsVisible = [];
+      // dataIdsVisible.push(this.searchKey)
+      // this.dataIdsVisible = dataIdsVisible
+
+      $('#dataContainer_sku_content').parent()[0].scrollTop = 0
+      $$scrolledDistance.top = 0
+      this.headHeight = 0
+      
+      if (this.searchKey) {
+        $$searchResult = []
+        $$searchResult.push(this.searchKey)
+      } else {
+        $$searchResult = $$dataSkuList
+      }
+      $$renderDatas()
+    },
+
+  },
+  created: function () {
+    const self = this;
+      // alert('yes')
+    // setTimeout(function(){
+    //   // alert('yes')
+      self.sizes = ['XS','S','M','L','XL','XXL','XXXL','XXXXL','2XL','3XL','4XL','1','3','4','4.5','5','5.5','6','6.5','7','7.5','8','8.5','9','9.5','10','10.5','11','11.5','12','12.5','13','14','15','18','30','32','34','10-','12-','14-16','1SIZE','2XLT','3XLT','3XL-T','4.5Y','4-5.5','4XL-T','4Y','5XL','6-7.5','7Y','8-9.5','L/XL','M/L','MISC','PRO','S/M','XXS']
+    // }, 0)
+    
+    // $.ajax({
+    //   type: 'GET',
+    //   url: '/epr/filtered',
+    //   // data to be added to query string:
+    //   // data: { name: 'Zepto.js' },
+    //   // type of data we are expecting in return:
+    //   dataType: 'json',
+    //   timeout: 300,
+    //   // context: $('body'),
+    //   success: function(data){
+    //     // console.log(data)
+    //     $$reloadSkus(data)
+    //     app.search('')
+    //   },
+    //   error: function(xhr, type){
+    //     alert('Ajax error!')
+    //   }
+    // })
+
+    // $.get('/epr/filtered', data => {
+    //   alert('yes')
+    //   // alert(data)
+    //   // console.log(data)
+    // })
+
+    ;(async () => {
+      await initData()
+    })()
+
+  },
+});
+
+app.randomChangeDataId();
+
+$('#dataContainer_sku_content').parent().scroll(scrollFromSkuToSize);
+$('#dataContainer_size_content').parent().scroll(scrollFromSizeToSku);
+
+
+jwerty.key('ctrl+P', function () {
+  alert('ctrl+P')
+});
+
+jwerty.key('T', function () {
+  // alert('T')
+  store.state.showPic = !store.state.showPic
+  var heightConfig = {
+    'true': 130,
+    'false': 30,
+  }
+  app.cellHeight = heightConfig[''+store.state.showPic]
+});
+
+jwerty.key('Q', function () {
+  app.sizes = ['XS','S','M','L','XL','XXL','XXXL','XXXXL','2XL','3XL','4XL']
+  app.sizeWidth = 50
+});
+
+jwerty.key('W', function () {
+  app.sizes = ['1','3','4','4.5','5','5.5','6','6.5','7','7.5','8','8.5','9','9.5','10','10.5','11','11.5','12','12.5','13','30','32','34','10-','12-','14-16']
+  app.sizeWidth = 32
+});
+
+jwerty.key('E', function () {
+  app.sizes = ['1SIZE','2XLT','3XLT','3XL-T','4.5Y','4-5.5','4XL-T','4Y','5XL','6-7.5','7Y','8-9.5','L/XL','M/L','MISC','PRO','S/M','XXS']
+  app.sizeWidth = 40
+});
+
+
+jwerty.key('R', function () {
+  app.sizes = ['XS','S','M','L','XL','XXL','XXXL','XXXXL','2XL','3XL','4XL','1','3','4','4.5','5','5.5','6','6.5','7','7.5','8','8.5','9','9.5','10','10.5','11','11.5','12','12.5','13','30','32','34','10-','12-','14-16','1SIZE','2XLT','3XLT','3XL-T','4.5Y','4-5.5','4XL-T','4Y','5XL','6-7.5','7Y','8-9.5','L/XL','M/L','MISC','PRO','S/M','XXS']
+  app.sizeWidth = 30
+});
+
+
+jwerty.key('F', function () {
+  store.state.currentScroller = 'dataContainer_sku_content'
+  var height = Math.floor($('#dataContainer_sku_parent').height() / app.cellHeight ) * app.cellHeight
+  $('#dataContainer_sku_parent').scrollTop(
+    $('#dataContainer_sku_content').parent()[0].scrollTop + height
+  )
+  $('#dataContainer_size_parent').scrollTop(
+    $('#dataContainer_size_content').parent()[0].scrollTop + height
+  )
+  // scrollFromSkuToSize()
+});
+
+
+jwerty.key('D', function () {
+  store.state.currentScroller = 'dataContainer_sku_content'
+  var height = Math.floor($('#dataContainer_sku_parent').height() / app.cellHeight ) * app.cellHeight
+
+  $('#dataContainer_sku_parent').scrollTop(
+    $('#dataContainer_sku_content').parent()[0].scrollTop - height
+  )
+  $('#dataContainer_size_parent').scrollTop(
+    $('#dataContainer_size_content').parent()[0].scrollTop - height
+  )
+  // scrollFromSkuToSize()
+});
+
+jwerty.key('X', function () {
+  const dataIdsHide = app.dataIdsHide
+  const sku = app.overSkuSizeInfo.sku
+  if (sku) {
+    if (!dataIdsHide[app.overSkuSizeInfo.sku]) {
+      dataIdsHide[app.overSkuSizeInfo.sku] = 1
+    } else {
+      dataIdsHide[app.overSkuSizeInfo.sku] = 0
+    }
+    // app.$set('dataIdsHide', JSON.parse(JSON.stringify(dataIdsHide)) )
+    app.dataIdsHide = JSON.parse(JSON.stringify(dataIdsHide))
+  }
+});
+
+
+jwerty.key('S', function () {
+  let skuInfoWidth = app.skuInfoWidth
+  if (skuInfoWidth === 100) {
+    skuInfoWidth = 400
+  } else {
+    skuInfoWidth = 100
+  }
+  app.skuInfoWidth = skuInfoWidth
+});
+
+
+jwerty.key('↑,↑,↓,↓', function () { 
+  alert('↑,↑,↓,↓')
+});
+
+
+jwerty.key('↑,↑,↓,↓', function () { 
+  alert('↑,↑,↓,↓')
+});
+
+// // filter变化时, 重新搜索数据
+// app.$watch('entrykeysMap', {
+//   deep: true,
+//   handler: function(oldv, newv) {
+//     store.set('entrykeysMap', getRawData(newv));
+//     console.log('............... set entrykeysMap')
+//     this.siftData();
+//   },
+// });
+
+</script>
+</body>
+</html>

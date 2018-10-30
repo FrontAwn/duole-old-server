@@ -1,0 +1,291 @@
+html
+  head
+    title ing
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <link rel="stylesheet" href="./assets/css/duole.css">
+
+    style(type='text/css').
+      body {
+        padding: 10px auto;
+        padding-bottom: 200px;
+      }
+      td.size {
+        border-right: 1px solid #ccc;
+        padding: 1px 4px;
+        text-align: center;
+      }
+      td.title {
+        background: #f1f1f1;
+      }
+
+  body
+    div#app( v-cloak )
+      p(style="color:#999;font-size:10px;") 仅显示以下尺码： {{sizesOrdered.join(', ')}}
+      //- p {{sizesOrdered | json}}
+
+      div(style="padding:20px;")
+        div
+          a(:href="'?length='+query.length+'&type='" style="padding-right:30px;") 所有
+          a(:href="'?length='+query.length+'&type=fw'" style="padding-right:30px;") 鞋
+          a(:href="'?length='+query.length+'&type=ap'" style="padding-right:30px;") 服装
+          a(:href="'?length='+query.length+'&type=eq'" style="padding-right:30px;") 装备
+          
+          div(style="position:absolute;top:60px;right:20px;")
+            form(method="GET" action="/newArrival?page=1&length=20&type=")
+              input(name="sku")
+              input(type="submit" value="搜索货号")
+
+      div(v-for="(idx,v) in ls")
+        com-sku(:idx_="idx" :imgserver="imgserver" :sku_="v.sku" :v="v" :sizes_="sizesOrdered")
+
+      div(style="padding:20px;")
+        div
+          a(v-if="query.page > 1" :href="'?page='+(query.page - 1)+'&length='+query.length+'&type='+(query.type || '')" style="padding-right:30px;") 上一页
+          a(:href="'?page='+(query.page + 1)+'&length='+query.length+'&type='+(query.type || '')" style="padding-right:30px;") 下一页
+
+        div(style="margin: 10px 0 20px 0;")
+          span(v-for="page in pages" )
+            a(v-if="page!=query.page" :href="'?page='+page+'&length='+query.length+'&type='+(query.type || '')" style="padding-right:10px;") {{page}}
+            span(v-else style="padding-left:5px;padding-right:15px;font-size:18px;") [{{page}}]
+
+  
+  div#com_sku(style="display:none;")
+    div(style="position:relative;border-bottom:1px solid #ccc;")
+      table
+        tr
+          td(valign="top" :style="'position:relative;background:'+(v.type==='newSku'?'#000':'')+';color:'+(v.type==='newSku'?'#fff':'#999')+';font-size:12px;'")
+            a(:id="'sku_'+v.sku" :href="'https://s.taobao.com/search?q='+v.sku+'&sort=sale-desc'" target="_blank" style="color:#F5361C")
+              img(v-if="imgserver" :src="imgserver+'/?sku='+v.sku+''" height="100" width="100")
+            br
+            font(style="font-size:12px;") {{new Date(v.createdAt).format("yyyy-MM-dd hh:mm:ss")}}
+            div(v-if="info.closeout" style="color:#fff;background:red;position:absolute;top:1;left:1;font-size:10px;") {{info.closeout ? '':''}}
+
+
+          td(style="padding-left: 20px;")
+            b {{v.sku}} 
+            span(:id="'title_'+v.id" v-if="info") (￥{{info.retailPrice / 100}})   {{info.name}}   
+            span(v-if="info")
+              font(style="color:#ff0000;padding-left:10px;") {{info.closeout ? '':''}}
+              font
+                translator(:from_="info.season")
+              font(style="color:blue;padding-left:10px;") 
+                translator(:from_="info.category")
+              font(style="color:red;padding-left:10px;")
+                translator(:from_="info.type")
+              font(style="color:green;padding-left:10px;")
+                translator(:from_="info.gender")
+            span(:id="'stock_'+v.id+'_'+idx_") 同步库存中...
+            div(style="padding: 10px 0 0 0px;")
+              div(style="padding: 0 0 0 0px;")
+                table
+                  tr
+                    td.size.title(v-for="size in sizes_" v-if="stockCurrent[size]")
+                      b {{size}}
+                  tr
+                    td.size(v-for="size in sizes_" v-if="stockCurrent[size]") {{stockCurrent[size]>300?300:stockCurrent[size] || '-'}}
+
+
+<script type="text/javascript" src="./assets/js/vue_v1.min.js"></script>
+<script type="text/javascript" src="./assets/js/zepto.js"></script>
+<script type="text/javascript">
+</script>
+
+script.
+    var isVisible = function(selectid) {
+      var o;
+      if ('object' === typeof selectid) {
+          o = selectid;
+      } else {
+          o = $('#'+selectid);
+      }
+      var of = o.offset();
+      var w = $(window);
+      return !(w.scrollTop() > (of.top + o.height()) || (w.scrollTop() + w.height()) < of.top);
+  }
+
+
+  Date.prototype.format = function(fmt) { 
+       var o = { 
+          "M+" : this.getMonth()+1,                 //月份 
+          "d+" : this.getDate(),                    //日 
+          "h+" : this.getHours(),                   //小时 
+          "m+" : this.getMinutes(),                 //分 
+          "s+" : this.getSeconds(),                 //秒 
+          "q+" : Math.floor((this.getMonth()+3)/3), //季度 
+          "S"  : this.getMilliseconds()             //毫秒 
+      }; 
+      if(/(y+)/.test(fmt)) {
+              fmt=fmt.replace(RegExp.$1, (this.getFullYear()+"").substr(4 - RegExp.$1.length)); 
+      }
+       for(var k in o) {
+          if(new RegExp("("+ k +")").test(fmt)){
+               fmt = fmt.replace(RegExp.$1, (RegExp.$1.length==1) ? (o[k]) : (("00"+ o[k]).substr((""+ o[k]).length)));
+           }
+       }
+      return fmt; 
+  }
+
+  const sizesOrdered = 'MISC 2C 3C  4C  5C  6C  7C  8C  9C  10C 10.5C 11C 11.5C 12C 12.5C 13.5C 13C 1Y 1.5Y 2Y 2.5Y 3Y 3.5Y 4Y  4.5Y  5Y  5.5Y  6Y  6.5Y  7Y 5  5.5 6 6.5 7 7.5 8 8.5 9 9.5 10  10.5  11  11.5  12 12.5 13 XS  S M L XL XXL XXXL 2XL 3XL 4-5.5 6-7.5 8-9.5 10- 12- 14-16'.replace(/  /img, ' ').split(' ')
+
+
+  const cache = {}
+
+  Vue.component('com-sku', {
+    props: ['sku_', 'v', 'imgserver', 'idx_', 'sizes_'],
+    data: function () {
+      return {
+        info: null,
+        stockCurrent: null,
+      }
+    },
+    created: function () {
+      bus.$on('scroll', this.loadStock)
+      //- this.loadStock()
+    },
+    methods: {
+      loadStock: function() {
+        var self = this
+        if (!isVisible('sku_'+this.sku_)) return;
+        if (this.info) return;
+        if (cache[this.sku_]) return;
+        cache[this.sku_] = 1
+
+        const v = this.v
+        $.get('/api/skuinfo?sku='+v.sku, (res) => {
+          $('#stock_'+v.id+'_'+this.idx_).html('')
+          if (res && res.sizes) {
+            self.info = res.info
+            this.stockCurrent = res.sizes
+          }
+        })
+      },
+    },
+    template: $('#com_sku').html(),
+  })
+
+
+
+
+
+
+
+
+
+
+
+  const dict = {
+    'FTWR': '鞋',
+    'APRL': '服装',
+    'EQMT': '装备',
+
+    'SP2017': '2017春',
+    'SU2017': '2017夏',
+    'FA2017': '2017秋',
+    'HO2017': '2017东',
+    
+    'SP2018': '2018春',
+    'SU2018': '2018夏',
+    'FA2018': '2018秋',
+    'HO2018': '2018东',
+
+    'SP2019': '2019春',
+    'SU2019': '2019夏',
+    'FA2019': '2019秋',
+    'HO2019': '2019东',
+
+    'MENS': '男性',
+    'WOMENS': '女性',
+    'KIDS': '儿童',
+    'UNISEX': '中性',
+
+    'SPORTSWEAR': '运动',
+    'BASKETBALL': '篮球',
+    'RUNNING': '跑步',
+    'WOMENS_TRAINING': '女子训练',
+    'JORDAN': '乔丹',
+    'MENS_TRAINING': '男子训练',
+    'YOUNG_ATHLETES': '青年运动',
+    'FOOTBALL_SOCCER': '跑步',
+  }
+
+  Vue.component('translator', {
+    props: ['from_'],
+    data: function () {
+      return {}
+    },
+    methods: {
+      getValue () {
+        return dict[this.from_] || this.from_
+      },
+    },
+    template: '<span>{{ getValue() }}</span>'
+  })
+
+  var bus = new Vue();
+
+
+  // 最上层容器
+  var app = new Vue({
+    el: '#app',
+    components: {
+    },
+    data: function(){
+      var ls = !{ls}
+      var query = !{query} || {}
+      query.page = parseInt(query.page) || 1
+      query.length = parseInt(query.length) || 10
+      ls.forEach((it) => {
+        //- it.stockCurrent = JSON.parse(JSON.stringify(it.stockChange))
+        it.stockCurrent = {}
+      })
+
+      let startPage = query.page - 10
+      let endPage = query.page + 10
+      if (startPage < 1) startPage = 1
+      const pages = []
+      for(let i=startPage;i<=endPage;i++){
+        pages.push(i)
+      }
+      
+      //- console.log(window.location.href)
+
+      return {
+        imgserver: 'http://'+window.location.hostname+':3000',
+        ls: ls,
+        info: {},
+        pages: pages,
+        sizesOrdered: sizesOrdered,
+        query: query,
+      }
+    },
+    watch: {
+    },
+    computed: {
+    },
+    methods: {
+      loadStock: function(){
+        //- console.log('loadStock')
+        this.ls.forEach((v, idx) => {
+          console.log(v.sku+':' + isVisible('sku_'+v.sku))
+        })
+      },
+    },
+    destroyed: function() {
+    },
+    created: function () {
+      const cache = {}
+      const sended = {}
+    },
+  });
+
+
+  $(window).scroll(() => {
+    //- console.log('---------------scrolling')
+    bus.$emit('scroll')
+  })
+
+  setTimeout(() => {
+    bus.$emit('scroll')
+  }, 100)
+
+

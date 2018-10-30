@@ -1,0 +1,105 @@
+html
+  head
+    title ing
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <link rel="stylesheet" href="./assets/css/duole.css">
+
+    style(type='text/css').
+      body {
+        padding: 10px auto;
+      }
+      td.size {
+        border-right: 1px solid #ccc;
+        padding: 1px 4px;
+        text-align: center;
+      }
+      td.title {
+        background: #f1f1f1;
+      }
+
+  body
+    div#app( v-cloak )
+      p 仅显示以下尺码： {{sizesOrdered.join(', ')}}
+    
+      div 预计批次
+
+        div(v-for="sku in skus" style="position:relative;border-bottom:1px solid #ccc;")
+          table
+            tr
+              td(valign="top")
+                img(:src="'http://192.168.1.87:3000/?sku=' + sku" height="150")
+
+              td(style="padding-left: 20px;")
+                b
+                  a(:href="'https://atonce.nike.net/#/detail/id/'+sku" target="blank" style="color:#F5361C") {{sku}}
+                div(v-for="date in dates" v-if="ls[sku][date]" style="padding: 10px 0 0 0px;")
+                  font(style="color:#999;") {{date}}
+
+                  div(style="padding: 0 0 0 0px;")
+                    table
+                      tr
+                        td.size.title(v-for="size in sizesOrdered" v-if="ls[sku][date].sizes[size]")
+                          b {{size}}
+                      tr
+                        td.size(v-for="size in sizesOrdered" v-if="ls[sku][date].sizes[size]") {{ls[sku][date].sizes[size]}}
+
+
+
+
+<script type="text/javascript" src="./assets/js/es6_promise.js"></script>
+<script type="text/javascript" src="./assets/js/moment.js"></script>
+<script type="text/javascript" src="./assets/js/vue_v1.min.js"></script>
+<script type="text/javascript" src="./assets/js/vuex.js"></script>
+<script type="text/javascript" src="./assets/js/jwerty.js"></script>
+
+<script type="text/javascript" src="./assets/js/zepto.js"></script>
+<script type="text/javascript">
+</script>
+
+script.
+
+  var bus = new Vue();
+  // 最上层容器
+  var app = new Vue({
+    el: '#app',
+    components: {
+    },
+    data: function(){
+      return {
+        ls: !{ls},
+        sizesOrdered: 'MISC 2C 3C  4C  5C  6C  7C  8C  9C  10C 10.5C 11C 11.5C 12C 12.5C 13.5C 13C 1Y 1.5Y 2Y 2.5Y 3Y 3.5Y 4Y  4.5Y  5Y  5.5Y  6Y  6.5Y  7Y 5  5.5 6 6.5 7 7.5 8 8.5 9 9.5 10  10.5  11  11.5  12 12.5 13 XS  S M L XL XXL XXXL 2XL 3XL 4-5.5 6-7.5 8-9.5 10- 12- 14-16'.replace(/  /img, ' ').split(' '),
+        dates: [],
+        skus: [],
+      }
+    },
+    watch: {
+    },
+    computed: {
+    },
+    methods: {
+    },
+    destroyed: function() {
+    },
+    created: function () {
+    },
+  });
+
+  var ls = !{ls}
+  var datesMap = {}
+  var skusMap = {}
+  for(var sku in ls) {
+    var batches = ls[sku]
+    skusMap[sku]= 1
+    for(var date in batches){
+      datesMap[date] = date
+    }
+  }
+  var skus = Object.keys(skusMap)
+  var dates = Object.keys(datesMap)
+  dates = dates.sort()
+  console.log(dates)
+  app.skus = skus
+  app.dates = dates
+
+
+

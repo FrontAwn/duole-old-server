@@ -1,0 +1,82 @@
+html
+  head
+    title ing
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <link rel="stylesheet" href="./assets/css/duole.css">
+
+    style(type='text/css').
+      body {
+        padding: 10px auto;
+        padding-bottom: 200px;
+      }
+      td.size {
+        border-right: 1px solid #ccc;
+        padding: 1px 4px;
+        text-align: center;
+      }
+      td.title {
+        background: #f1f1f1;
+      }
+
+  body
+    div#app( v-cloak style="padding: 50px;")
+      p(style="color:#999;font-size:10px;") 
+        p 用户
+          input#username(v-model="user") 
+        p 密码
+          input#password(v-model="password" type="password")
+        p 
+          input(@click="login" type="submit" value='登录' style="padding:10px; font-size:22px; ")
+
+        p {{tip}}
+
+<script type="text/javascript" src="./assets/js/es6_promise.js"></script>
+<script type="text/javascript" src="./assets/js/moment.js"></script>
+<script type="text/javascript" src="./assets/js/vue_v1.min.js"></script>
+<script type="text/javascript" src="./assets/js/vuex.js"></script>
+<script type="text/javascript" src="./assets/js/jwerty.js"></script>
+
+<script type="text/javascript" src="./assets/js/zepto.js"></script>
+<script type="text/javascript">
+</script>
+
+script.
+  var bus = new Vue();
+
+  // 最上层容器
+  var app = new Vue({
+    el: '#app',
+    components: {
+    },
+    data: function(){
+      return {
+        tip: null,
+      }
+    },
+    watch: {
+    },
+    computed: {
+    },
+    methods: {
+      login: function() {
+        const tips = {
+          'no user': '找不到用户',
+          'err password': '密码错误',
+        }
+        $.post('/login', {user: this.user, password: this.password, }, (res) => {
+          console.log(res);
+          if (!res.err) {
+            window.location.href = '/newArrival?page=1&length=20&sku=&type='
+          } else {
+            this.tip = tips[res.err] || '未知错误'
+          }
+        })
+
+      },
+    },
+    destroyed: function() {
+    },
+    created: function () {
+    },
+  });
+
